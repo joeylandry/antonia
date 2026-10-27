@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Demo mode (no Supabase configured): no sign-in at all, everything is open.
+const isDemo = () => !process.env.DATABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_URL;
+
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/confirm"];
 
 /**
@@ -9,6 +12,7 @@ const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/confirm"];
  * re-verifies the user and the database enforces ownership with RLS.
  */
 export async function proxy(request: NextRequest) {
+  if (isDemo()) return NextResponse.next({ request });
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

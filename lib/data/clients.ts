@@ -1,4 +1,6 @@
 import "server-only";
+import { isDemo } from "@/lib/demo/mode";
+import * as demo from "@/lib/demo/store";
 import type { Tx } from "@/lib/db/client";
 import { withTrainer } from "@/lib/db/client";
 import type { Client, ClientListItem, ClientKind, ClientStatus } from "@/lib/domain/types";
@@ -50,6 +52,7 @@ export async function listClients(
   trainerId: string,
   opts: { archived?: boolean } = {},
 ): Promise<ClientListItem[]> {
+  if (isDemo()) return demo.listClients(opts);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<(Row & { last_session_date: string | null; session_count: number; active_goal_count: number })[]>`
       select c.*,
@@ -69,6 +72,7 @@ export async function listClients(
 }
 
 export async function getClient(trainerId: string, id: string): Promise<Client | null> {
+  if (isDemo()) return demo.getClient(id);
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   return withTrainer(trainerId, async (tx) => {
     const [row] = await tx<Row[]>`select * from public.clients where id = ${id}`;
@@ -94,6 +98,7 @@ function values(input: ClientInput) {
 }
 
 export async function createClientRecord(trainerId: string, input: ClientInput): Promise<string> {
+  if (isDemo()) return demo.createClientRecord(input);
   return withTrainer(trainerId, async (tx) => {
     const v = values(input);
     const [row] = await tx<{ id: string }[]>`
@@ -103,6 +108,7 @@ export async function createClientRecord(trainerId: string, input: ClientInput):
 }
 
 export async function updateClientRecord(trainerId: string, id: string, input: ClientInput): Promise<boolean> {
+  if (isDemo()) return demo.updateClientRecord(id, input);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`update public.clients set ${tx(values(input))} where id = ${id} returning id`;
     return rows.length > 0;
@@ -110,6 +116,7 @@ export async function updateClientRecord(trainerId: string, id: string, input: C
 }
 
 export async function setClientArchived(trainerId: string, id: string, archived: boolean): Promise<boolean> {
+  if (isDemo()) return demo.setClientArchived(id, archived);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`
       update public.clients set archived_at = ${archived ? tx`now()` : null} where id = ${id} returning id`;
@@ -119,6 +126,7 @@ export async function setClientArchived(trainerId: string, id: string, archived:
 
 /** Marks a review as done and optionally schedules the next one. */
 export async function completeReview(trainerId: string, id: string, today: string, nextReview: string | null): Promise<boolean> {
+  if (isDemo()) return demo.completeReview(id, today, nextReview);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`
       update public.clients set last_reviewed_on = ${today}, next_review_date = ${nextReview} where id = ${id} returning id`;
@@ -127,6 +135,7 @@ export async function completeReview(trainerId: string, id: string, today: strin
 }
 
 export async function deleteClientRecord(trainerId: string, id: string): Promise<boolean> {
+  if (isDemo()) return demo.deleteClientRecord(id);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`delete from public.clients where id = ${id} returning id`;
     return rows.length > 0;

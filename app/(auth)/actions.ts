@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { isDemo } from "@/lib/demo/mode";
 import { createClient } from "@/lib/supabase/server";
 import { emailSchema, newPasswordSchema, safeNext, signInSchema } from "@/lib/validation/auth";
 
@@ -44,6 +45,7 @@ export async function signInAction(_prev: AuthFormState, formData: FormData): Pr
 }
 
 export async function signOutAction() {
+  if (isDemo()) redirect("/");
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
