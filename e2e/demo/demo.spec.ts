@@ -12,6 +12,25 @@ test.describe("demo mode (no Supabase configured)", () => {
     await expect(page).toHaveURL(/localhost:3300\/$/);
   });
 
+  test("the status tiles on Today open the matching filtered client list", async ({ page }) => {
+    await page.goto("/");
+    const summary = page.getByRole("list", { name: /Client status summary/ });
+    for (const [label, param] of [["On track", "on_track"], ["Check in soon", "watch"], ["Needs attention", "overdue"]] as const) {
+      await page.goto("/");
+      const tile = summary.getByRole("link", { name: new RegExp(label) });
+      const count = Number((await tile.innerText()).match(/\d+/)![0]);
+      expect(count).toBeGreaterThan(0);
+      await tile.click();
+      await expect(page).toHaveURL(new RegExp(`/clients\\?health=${param}$`));
+      await expect(page.getByRole("button", { name: new RegExp(`^${label}`) })).toHaveAttribute("aria-pressed", "true");
+      const rows = page.getByRole("list").filter({ has: page.getByRole("link", { name: /Last session|No sessions yet/ }) }).first().getByRole("listitem");
+      await expect(rows).toHaveCount(count);
+    }
+    // Chips toggle off again.
+    await page.getByRole("button", { name: /^Needs attention/ }).click();
+    await expect(page.getByRole("link", { name: /Casey Morgan/ })).toBeVisible();
+  });
+
   test("clients, profile, sessions, progress and goals all show real-looking data", async ({ page }) => {
     await page.goto("/clients");
     await expect(page.getByRole("link", { name: /Jordan Rivera/ })).toBeVisible();

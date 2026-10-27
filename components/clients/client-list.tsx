@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "./avatar";
 import { HealthDot } from "./health-dot";
-import { clientHealth } from "@/lib/domain/status";
+import { clientHealth, HEALTH_LABEL } from "@/lib/domain/status";
 import { ReviewBadge, StatusBadge, reviewState } from "./status-badges";
 import { daysBetween, relativeDay } from "@/lib/dates";
 import { kindLabel, type ClientListItem, type ClientStatus } from "@/lib/domain/types";
@@ -17,6 +17,13 @@ import { cn } from "@/lib/utils";
 
 type Filter = "all" | ClientStatus;
 type Sort = "name" | "recent" | "review";
+type HealthFilter = "all" | "on_track" | "watch" | "overdue";
+
+const HEALTH_FILTERS: { value: Exclude<HealthFilter, "all">; label: string }[] = [
+  { value: "on_track", label: HEALTH_LABEL.on_track },
+  { value: "watch", label: HEALTH_LABEL.watch },
+  { value: "overdue", label: HEALTH_LABEL.overdue },
+];
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
@@ -25,10 +32,21 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "inactive", label: "Inactive" },
 ];
 
-export function ClientList({ clients, today, archived }: { clients: ClientListItem[]; today: string; archived: boolean }) {
+export function ClientList({
+  clients,
+  today,
+  archived,
+  initialHealth = "all",
+}: {
+  clients: ClientListItem[];
+  today: string;
+  archived: boolean;
+  initialHealth?: HealthFilter;
+}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("name");
+  const [health, setHealth] = useState<HealthFilter>(initialHealth);
 
   const counts = useMemo(() => {
     const c: Record<Filter, number> = { all: clients.length, active: 0, on_hold: 0, inactive: 0 };
@@ -36,11 +54,21 @@ export function ClientList({ clients, today, archived }: { clients: ClientListIt
     return c;
   }, [clients]);
 
+  const healthCounts = useMemo(() => {
+    const c = { on_track: 0, watch: 0, overdue: 0 };
+    for (const x of clients) {
+      const h = clientHealth(x, today);
+      if (h === "on_track" || h === "watch" || h === "overdue") c[h]++;
+    }
+    return c;
+  }, [clients, today]);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = clients.filter(
       (c) =>
         (filter === "all" || c.status === filter) &&
+        (health === "all" || clientHealth(c, today) === health) &&
         (!q || c.fullName.toLowerCase().includes(q) || (c.primaryGoal ?? "").toLowerCase().includes(q)),
     );
     const byName = (a: ClientListItem, b: ClientListItem) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" });
@@ -48,7 +76,7 @@ export function ClientList({ clients, today, archived }: { clients: ClientListIt
     if (sort === "recent")
       return list.sort((a, b) => (b.lastSessionDate ?? "").localeCompare(a.lastSessionDate ?? "") || byName(a, b));
     return list.sort((a, b) => (a.nextReviewDate ?? "9999").localeCompare(b.nextReviewDate ?? "9999") || byName(a, b));
-  }, [clients, query, filter, sort]);
+  }, [clients, query, filter, health, sort, today]);
 
   if (clients.length === 0) {
     return archived ? (
@@ -108,6 +136,28 @@ export function ClientList({ clients, today, archived }: { clients: ClientListIt
               )}
             >
               {f.label} <span className="tabular opacity-70">{counts[f.value]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!archived && (
+        <div role="group" aria-label="Filter by status light" className="mt-2 flex flex-wrap items-center gap-1.5">
+          {HEALTH_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              aria-pressed={health === f.value}
+              onClick={() => setHealth(health === f.value ? "all" : f.value)}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[0.8125rem] font-medium transition-colors md:py-1",
+                health === f.value
+                  ? "border-transparent bg-primary-soft text-primary-soft-foreground"
+                  : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <HealthDot health={f.value} decorative />
+              {f.label} <span className="tabular opacity-70">{healthCounts[f.value]}</span>
             </button>
           ))}
         </div>
