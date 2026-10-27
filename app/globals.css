@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =====================================================================
+   DESIGN TOKENS
+   Muted navy / slate surfaces with a dusty-lavender accent. Every colour
+   used in the UI comes from these variables; components never hard-code hex.
+   ===================================================================== */
+
+:root {
+  color-scheme: light;
+
+  --background: #f6f5fa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --muted: #efedf6;
+  --border: #dedbea;
+  --border-strong: #c9c5dc;
+  --foreground: #1b1f36;
+  --foreground-soft: #3d4262;
+  --muted-foreground: #5f6583;
+
+  --primary: #55458f;
+  --primary-hover: #473a7a;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e9e5f7;
+  --primary-soft-foreground: #3f3270;
+  --ring: #6f5fb3;
+
+  --success: #2c7656;
+  --success-soft: #e0f1e9;
+  --warning: #8d5f0c;
+  --warning-soft: #f7ecd6;
+  --danger: #ac3550;
+  --danger-soft: #f8e3e8;
+  --info: #3c5aa6;
+  --info-soft: #e3e9f8;
+
+  --chart-1: #6a58b0;
+  --chart-2: #3f77a8;
+  --chart-3: #b4617c;
+  --chart-4: #3f8a6b;
+  --chart-5: #a98030;
+  --chart-grid: #e4e1ee;
+
+  --shadow-sm: 0 1px 2px rgb(27 31 54 / 0.06);
+  --shadow-md: 0 4px 16px -4px rgb(27 31 54 / 0.12), 0 1px 3px rgb(27 31 54 / 0.06);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: #0e111e;
+  --surface: #151929;
+  --surface-raised: #1a1f33;
+  --muted: #1c2136;
+  --border: #272d47;
+  --border-strong: #363e60;
+  --foreground: #e9ebf5;
+  --foreground-soft: #c5c9de;
+  --muted-foreground: #9aa1bf;
+
+  --primary: #b3a4e6;
+  --primary-hover: #c4b8ee;
+  --primary-foreground: #15112b;
+  --primary-soft: #272145;
+  --primary-soft-foreground: #cfc5f2;
+  --ring: #b3a4e6;
+
+  --success: #7cc7a6;
+  --success-soft: #16312a;
+  --warning: #e1b46b;
+  --warning-soft: #36291a;
+  --danger: #ea8fa3;
+  --danger-soft: #3a1c27;
+  --info: #94aeea;
+  --info-soft: #1c2848;
+
+  --chart-1: #b3a4e6;
+  --chart-2: #7fb0dc;
+  --chart-3: #e08ba5;
+  --chart-4: #7cc7a6;
+  --chart-5: #e1b46b;
+  --chart-grid: #262c45;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-foreground-soft: var(--foreground-soft);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+/* =====================================================================
+   BASE
+   ===================================================================== */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-feature-settings: "cv11", "ss01", "tnum";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--primary-soft-foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* print: a client's log should print cleanly on one page */
+@media print {
+  [data-print-hide] {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
