@@ -22,7 +22,7 @@ export function LoginForm() {
       )}
       {state.error && <FormBanner tone="error">{state.error}</FormBanner>}
       <Field label="Email" htmlFor="email" error={state.fieldErrors?.email}>
-        <Input id="email" name="email" type="email" autoComplete="email" required aria-invalid={!!state.fieldErrors?.email} aria-describedby={state.fieldErrors?.email ? "email-error" : undefined} />
+        <Input id="email" name="email" type="email" autoComplete="email" defaultValue={state.email ?? ""} required aria-invalid={!!state.fieldErrors?.email} aria-describedby={state.fieldErrors?.email ? "email-error" : undefined} />
       </Field>
       <Field label="Password" htmlFor="password" error={state.fieldErrors?.password}>
         <Input id="password" name="password" type="password" autoComplete="current-password" required aria-invalid={!!state.fieldErrors?.password} aria-describedby={state.fieldErrors?.password ? "password-error" : undefined} />
