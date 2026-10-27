@@ -15,7 +15,7 @@ export default async function ResetPasswordPage() {
     <>
       <h1 className="font-display text-3xl font-medium tracking-tight">Choose a new password</h1>
       <p className="mt-1.5 text-sm text-muted-foreground">Use at least 10 characters. A passphrase works well.</p>
-      <NewPasswordForm doneHref="/" doneLabel="Continue to Antonia" />
+      <NewPasswordForm doneHref="/" doneLabel="Continue" />
     </>
   );
 }

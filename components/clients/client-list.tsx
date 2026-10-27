@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "./avatar";
+import { HealthDot } from "./health-dot";
+import { clientHealth } from "@/lib/domain/status";
 import { ReviewBadge, StatusBadge, reviewState } from "./status-badges";
 import { daysBetween, relativeDay } from "@/lib/dates";
 import { kindLabel, type ClientListItem, type ClientStatus } from "@/lib/domain/types";
@@ -126,7 +128,10 @@ export function ClientList({ clients, today, archived }: { clients: ClientListIt
                   prefetch={false}
                   className="group flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                 >
-                  <Avatar name={c.fullName} />
+                  <span className="relative shrink-0">
+                    <Avatar name={c.fullName} />
+                    <HealthDot health={clientHealth(c, today)} className="absolute -bottom-0.5 -right-0.5" />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate font-medium">{c.fullName}</span>

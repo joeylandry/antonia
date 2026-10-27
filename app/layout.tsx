@@ -19,7 +19,7 @@ const newsreader = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Antonia", template: "%s · Antonia" },
+  title: { default: "FitnessTracker", template: "%s · FitnessTracker" },
   description: "Client management and progress tracking for personal trainers.",
   robots: { index: false, follow: false },
 };

@@ -102,7 +102,7 @@ export function TrendChart({
             dataKey="value"
             stroke={color}
             strokeWidth={2.25}
-            dot={{ r: 3.5, fill: color, stroke: "var(--surface)", strokeWidth: 1.5 }}
+            dot={points.length > 36 ? false : { r: 3.5, fill: color, stroke: "var(--surface)", strokeWidth: 1.5 }}
             activeDot={{ r: 5.5, fill: color, stroke: "var(--surface)", strokeWidth: 2 }}
             isAnimationActive={false}
           />

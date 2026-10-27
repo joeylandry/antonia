@@ -12,6 +12,8 @@ import { requireTrainer } from "@/lib/auth";
 import { listClients } from "@/lib/data/clients";
 import { goalsDueSoon, recentSessions, sessionsThisWeek } from "@/lib/data/dashboard";
 import { daysBetween, formatDate, relativeDay, todayIn } from "@/lib/dates";
+import { clientHealth, type Health } from "@/lib/domain/status";
+import { HealthDot } from "@/components/clients/health-dot";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Today" };
@@ -64,6 +66,8 @@ export default async function TodayPage() {
   const quiet = active
     .filter((c) => (c.lastSessionDate ? daysBetween(c.lastSessionDate, today) >= STALE_DAYS : c.sessionCount === 0 && daysBetween(c.createdAt.toISOString().slice(0, 10), today) >= 7))
     .sort((a, b) => (a.lastSessionDate ?? "").localeCompare(b.lastSessionDate ?? ""));
+  const tally: Record<Health, number> = { on_track: 0, watch: 0, overdue: 0, new: 0, paused: 0 };
+  for (const c of active) tally[clientHealth(c, today)]++;
   const nothingNeeded = reviews.length === 0 && quiet.length === 0 && goalsDue.length === 0;
 
   return (
@@ -74,6 +78,24 @@ export default async function TodayPage() {
         description={`${active.length} active ${active.length === 1 ? "client" : "clients"} · ${weekCount} ${weekCount === 1 ? "session" : "sessions"} in the last 7 days`}
         actions={<LogSessionPicker clients={active.map((c) => ({ id: c.id, name: c.fullName }))} />}
       />
+
+      <ul aria-label="Client status summary" className="grid grid-cols-3 gap-3">
+        {(
+          [
+            ["on_track", "On track", "text-success"],
+            ["watch", "Check in soon", "text-warning"],
+            ["overdue", "Needs attention", "text-danger"],
+          ] as const
+        ).map(([health, label, color]) => (
+          <li key={health} className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-3 sm:px-4">
+            <HealthDot health={health} />
+            <div className="min-w-0">
+              <div className={cn("tabular font-display text-2xl font-medium leading-none", color)}>{tally[health]}</div>
+              <div className="mt-1 truncate text-xs text-muted-foreground">{label}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
 
       <section className="space-y-4">
         <SectionHeader title="Needs your attention" />

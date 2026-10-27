@@ -11,6 +11,6 @@ export function isDemo(): boolean {
 
 export const DEMO_TRAINER = {
   id: "00000000-0000-4000-8000-00000000d3a0",
-  email: "demo@antonia.app",
+  email: "demo@fitnesstracker.app",
   displayName: "Antonia",
 };

@@ -66,6 +66,7 @@ export function GoalCard({
             {goal.status === "achieved" && <Badge tone="success">Achieved{goal.achievedOn ? ` ${formatDate(goal.achievedOn, year)}` : ""}</Badge>}
             {goal.status === "dropped" && <Badge>Dropped</Badge>}
             {reached && <Badge tone="success">Target reached</Badge>}
+            {active && !reached && progress && progress.percent >= 75 && <Badge tone="success">Almost there</Badge>}
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {goal.kind === "lift" ? `${goal.exerciseName} · ${goal.targetValue} lb` : "General goal"}
@@ -94,7 +95,7 @@ export function GoalCard({
                     aria-valuenow={progress.percent}
                     className="h-2 overflow-hidden rounded-full bg-border-strong/40"
                   >
-                    <div className={cn("h-full rounded-full transition-[width]", progress.achieved ? "bg-success" : "bg-primary")} style={{ width: `${progress.percent}%` }} />
+                    <div className={cn("h-full rounded-full transition-[width]", progress.achieved || progress.percent >= 75 ? "bg-success" : "bg-primary")} style={{ width: `${progress.percent}%` }} />
                   </div>
                   <div className="mt-1.5 flex flex-wrap justify-between gap-x-4 text-xs text-muted-foreground">
                     <span>
