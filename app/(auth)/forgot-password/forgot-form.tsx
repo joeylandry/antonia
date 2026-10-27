@@ -14,7 +14,7 @@ export function ForgotForm() {
       {state.error && <FormBanner tone="error">{state.error}</FormBanner>}
       {state.notice && <FormBanner tone="success">{state.notice}</FormBanner>}
       <Field label="Email" htmlFor="email" error={state.fieldErrors?.email}>
-        <Input id="email" name="email" type="email" autoComplete="email" required aria-invalid={!!state.fieldErrors?.email} aria-describedby={state.fieldErrors?.email ? "email-error" : undefined} />
+        <Input id="email" name="email" type="email" autoComplete="email" defaultValue={state.email ?? ""} required aria-invalid={!!state.fieldErrors?.email} aria-describedby={state.fieldErrors?.email ? "email-error" : undefined} />
       </Field>
       <Button type="submit" size="lg" className="w-full" loading={pending}>
         Send reset link

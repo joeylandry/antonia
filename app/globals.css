@@ -16,7 +16,7 @@
   --surface-raised: #ffffff;
   --muted: #efedf6;
   --border: #dedbea;
-  --border-strong: #c9c5dc;
+  --border-strong: #8e94b0;
   --foreground: #1b1f36;
   --foreground-soft: #3d4262;
   --muted-foreground: #5f6583;
@@ -56,7 +56,7 @@
   --surface-raised: #1a1f33;
   --muted: #1c2136;
   --border: #272d47;
-  --border-strong: #363e60;
+  --border-strong: #566083;
   --foreground: #e9ebf5;
   --foreground-soft: #c5c9de;
   --muted-foreground: #9aa1bf;
@@ -162,6 +162,11 @@ body {
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* The native datalist arrow is inconsistent with our other fields; typeahead still works. */
+input[list]::-webkit-calendar-picker-indicator {
+  display: none !important;
 }
 
 @layer utilities {

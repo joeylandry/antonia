@@ -22,6 +22,7 @@ export function NavLink({
 
   return (
     <Link
+      prefetch={false}
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(

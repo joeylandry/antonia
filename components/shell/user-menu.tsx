@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTransition } from "react";
 import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -15,6 +16,7 @@ function initials(name: string, email: string) {
 }
 
 export function UserMenu({ trainer, compact }: { trainer: Trainer; compact?: boolean }) {
+  const [, startTransition] = useTransition();
   const label = trainer.displayName || trainer.email;
   return (
     <DropdownMenu>
@@ -50,13 +52,10 @@ export function UserMenu({ trainer, compact }: { trainer: Trainer; compact?: boo
             <Settings /> Settings
           </Link>
         </DropdownMenuItem>
-        <form action={signOutAction}>
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full">
-              <LogOut /> Sign out
-            </button>
-          </DropdownMenuItem>
-        </form>
+        {/* Not a <form>: Radix unmounts the menu on select, which would cancel a form submit. */}
+        <DropdownMenuItem onSelect={() => startTransition(() => signOutAction())}>
+          <LogOut /> Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

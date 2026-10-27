@@ -66,6 +66,8 @@ create table public.sessions (
 create index sessions_client_date_idx on public.sessions (client_id, session_date desc);
 create index sessions_trainer_date_idx on public.sessions (trainer_id, session_date desc);
 
+-- Exercise references are checked at commit (deferrable) so deleting a whole trainer
+-- account cascades cleanly, while an exercise that still has history cannot be deleted alone.
 -- One row per exercise performed in a session. `sets` is an ordered array of
 -- {reps?: int, weight?: number (lb), seconds?: int}; every field is optional
 -- because the existing paper log mixes weighted, timed and bodyweight work.
@@ -79,7 +81,7 @@ create table public.session_entries (
               check (jsonb_typeof(sets) = 'array' and jsonb_array_length(sets) <= 30),
   notes       text check (char_length(notes) <= 2000),
   foreign key (session_id, trainer_id) references public.sessions (id, trainer_id) on delete cascade,
-  foreign key (exercise_id, trainer_id) references public.exercises (id, trainer_id) on delete restrict
+  foreign key (exercise_id, trainer_id) references public.exercises (id, trainer_id) deferrable initially deferred
 );
 create index session_entries_session_idx on public.session_entries (session_id, position);
 create index session_entries_exercise_idx on public.session_entries (exercise_id);
@@ -98,7 +100,7 @@ create table public.goals (
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   foreign key (client_id, trainer_id) references public.clients (id, trainer_id) on delete cascade,
-  foreign key (exercise_id, trainer_id) references public.exercises (id, trainer_id) on delete restrict,
+  foreign key (exercise_id, trainer_id) references public.exercises (id, trainer_id) deferrable initially deferred,
   check (kind <> 'lift' or (exercise_id is not null and target_value is not null))
 );
 create index goals_client_idx on public.goals (client_id, status);
