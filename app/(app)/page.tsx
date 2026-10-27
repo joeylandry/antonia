@@ -79,7 +79,7 @@ export default async function TodayPage() {
         actions={<LogSessionPicker clients={active.map((c) => ({ id: c.id, name: c.fullName }))} />}
       />
 
-      <ul aria-label="Client status summary" className="grid grid-cols-3 gap-3">
+      <ul aria-label="Client status summary. Select one to see those clients." className="grid grid-cols-3 gap-3">
         {(
           [
             ["on_track", "On track", "text-success"],
@@ -87,12 +87,19 @@ export default async function TodayPage() {
             ["overdue", "Needs attention", "text-danger"],
           ] as const
         ).map(([health, label, color]) => (
-          <li key={health} className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-3 sm:px-4">
-            <HealthDot health={health} />
-            <div className="min-w-0">
-              <div className={cn("tabular font-display text-2xl font-medium leading-none", color)}>{tally[health]}</div>
-              <div className="mt-1 truncate text-xs text-muted-foreground">{label}</div>
-            </div>
+          <li key={health}>
+            <Link
+              href={`/clients?health=${health}`}
+              prefetch={false}
+              className="group flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-3 transition-colors hover:border-border-strong hover:bg-muted/60 sm:px-4"
+            >
+              <HealthDot health={health} decorative />
+              <div className="min-w-0 flex-1">
+                <div className={cn("tabular font-display text-2xl font-medium leading-none", color)}>{tally[health]}</div>
+                <div className="mt-1 truncate text-xs text-muted-foreground">{label}</div>
+              </div>
+              <ChevronRight className="hidden size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block" aria-hidden />
+            </Link>
           </li>
         ))}
       </ul>

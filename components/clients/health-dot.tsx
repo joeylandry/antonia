@@ -9,12 +9,12 @@ const COLOR: Record<Health, string> = {
   paused: "bg-border-strong",
 };
 
-/** A small status light. The label is available to screen readers and on hover. */
-export function HealthDot({ health, className }: { health: Health; className?: string }) {
+/** A small status light. The label is available to screen readers and on hover, unless `decorative` (text already says it). */
+export function HealthDot({ health, className, decorative }: { health: Health; className?: string; decorative?: boolean }) {
   return (
-    <span title={HEALTH_LABEL[health]} className={cn("inline-flex", className)}>
-      <span aria-hidden className={cn("size-2.5 rounded-full ring-2 ring-surface", COLOR[health], health === "on_track" && "shadow-[0_0_0_3px_color-mix(in_srgb,var(--success)_22%,transparent)]")} />
-      <span className="sr-only">{HEALTH_LABEL[health]}</span>
+    <span title={decorative ? undefined : HEALTH_LABEL[health]} className={cn("inline-flex", className)}>
+      <span aria-hidden className={cn("size-2.5 rounded-full ring-2 ring-surface", COLOR[health])} />
+      {!decorative && <span className="sr-only">{HEALTH_LABEL[health]}</span>}
     </span>
   );
 }

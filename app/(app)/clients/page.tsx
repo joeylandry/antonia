@@ -10,8 +10,9 @@ import { todayIn } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Clients" };
 
-export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ archived?: string }> }) {
-  const { archived } = await searchParams;
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ archived?: string; health?: string }> }) {
+  const { archived, health } = await searchParams;
+  const initialHealth = health === "on_track" || health === "watch" || health === "overdue" ? health : "all";
   const showArchived = archived === "1";
   const trainer = await requireTrainer();
   const clients = await listClients(trainer.id, { archived: showArchived });
@@ -38,7 +39,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           </>
         }
       />
-      <ClientList clients={clients} today={todayIn(trainer.timezone)} archived={showArchived} />
+      <ClientList clients={clients} today={todayIn(trainer.timezone)} archived={showArchived} initialHealth={initialHealth} />
     </div>
   );
 }

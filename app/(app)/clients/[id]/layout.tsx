@@ -40,7 +40,7 @@ export default async function ClientLayout({ children, params }: { children: Rea
             <h1 className="font-display text-[1.75rem] font-medium leading-tight tracking-tight sm:text-3xl">{client.fullName}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Badge tone={health === "on_track" ? "success" : health === "watch" ? "warning" : health === "overdue" ? "danger" : health === "new" ? "info" : "neutral"} className="gap-1.5">
-                <HealthDot health={health} className="[&>span]:ring-0 [&>span]:shadow-none" />
+                <HealthDot health={health} decorative className="[&>span]:ring-0" />
                 {HEALTH_LABEL[health]}
               </Badge>
               <Badge tone="neutral">{kindLabel(client.kind)}</Badge>
