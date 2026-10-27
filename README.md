@@ -49,6 +49,8 @@ Layout: `app/` routes · `components/` UI (`components/ui` is the design-system 
 
 5. Sign in, set your name and time zone under Settings.
 
+**Hardening notes.** `NEXT_PUBLIC_SITE_URL` is required in production (reset-email links never use request headers). The app sends a Content-Security-Policy and the usual framing/sniffing/referrer headers (`next.config.ts`). For defence in depth, point `DATABASE_URL` at a dedicated login role that is `NOBYPASSRLS` and a member of `authenticated` instead of the `postgres` superuser role; RLS is then enforced even if a future query were ever built unsafely. Every future migration must enable RLS and add its own grants, since Supabase auto-grants new tables to `anon`/`authenticated`.
+
 Backups: Supabase takes daily backups on paid plans; Settings → "Download all data" gives a portable JSON copy any time.
 
 ## Develop

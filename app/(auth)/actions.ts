@@ -49,13 +49,16 @@ export async function signOutAction() {
   redirect("/login");
 }
 
+/**
+ * Origin used in password-reset emails. Never derived from request headers in
+ * production, where a forged Host header could aim the email at another site.
+ */
 async function siteUrl() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL;
   if (configured) return configured.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") throw new Error("NEXT_PUBLIC_SITE_URL must be set in production.");
   const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
+  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
 }
 
 export async function requestPasswordResetAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {

@@ -10,10 +10,11 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = safeNext(searchParams.get("next"), "/");
 
-  if (tokenHash && type) {
+  // Only password recovery links are issued by this app.
+  if (tokenHash && type === "recovery") {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
+    if (!error) return NextResponse.redirect(new URL(next, request.nextUrl.origin));
   }
-  return NextResponse.redirect(new URL("/login?error=link", request.url));
+  return NextResponse.redirect(new URL("/login?error=link", request.nextUrl.origin));
 }
