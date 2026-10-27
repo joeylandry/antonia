@@ -11,6 +11,9 @@ import { requireTrainer } from "@/lib/auth";
 import { getClient } from "@/lib/data/clients";
 import { todayIn } from "@/lib/dates";
 import { kindLabel } from "@/lib/domain/types";
+import { HealthDot } from "@/components/clients/health-dot";
+import { clientHealth, HEALTH_LABEL } from "@/lib/domain/status";
+import { listSessions } from "@/lib/data/sessions";
 
 export default async function ClientLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,6 +22,8 @@ export default async function ClientLayout({ children, params }: { children: Rea
   if (!client) notFound();
   const today = todayIn(trainer.timezone);
   const archived = client.archivedAt != null;
+  const lastSessionDate = (await listSessions(trainer.id, id))[0]?.sessionDate ?? null;
+  const health = clientHealth({ ...client, lastSessionDate }, today);
 
   return (
     <div className="space-y-6">
@@ -34,6 +39,10 @@ export default async function ClientLayout({ children, params }: { children: Rea
           <div className="min-w-0">
             <h1 className="font-display text-[1.75rem] font-medium leading-tight tracking-tight sm:text-3xl">{client.fullName}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <Badge tone={health === "on_track" ? "success" : health === "watch" ? "warning" : health === "overdue" ? "danger" : health === "new" ? "info" : "neutral"} className="gap-1.5">
+                <HealthDot health={health} className="[&>span]:ring-0 [&>span]:shadow-none" />
+                {HEALTH_LABEL[health]}
+              </Badge>
               <Badge tone="neutral">{kindLabel(client.kind)}</Badge>
               <StatusBadge status={client.status} />
               {archived && <Badge tone="neutral">Archived</Badge>}

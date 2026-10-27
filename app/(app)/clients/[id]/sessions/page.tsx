@@ -11,17 +11,28 @@ import { summarizeSets } from "@/lib/domain/progress";
 
 export const metadata: Metadata = { title: "Sessions" };
 
-export default async function SessionsPage({ params }: { params: Promise<{ id: string }> }) {
+const PAGE = 15;
+
+export default async function SessionsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ show?: string }>;
+}) {
   const { id } = await params;
+  const { show } = await searchParams;
+  const limit = Math.min(Math.max(Number(show) || PAGE, PAGE), 1000);
   const trainer = await requireTrainer();
-  const sessions = await listSessions(trainer.id, id);
+  const allSessions = await listSessions(trainer.id, id);
+  const sessions = allSessions.slice(0, limit);
   const year = Number(todayIn(trainer.timezone).slice(0, 4));
 
   return (
     <div className="space-y-6">
       <SectionHeader
         title="Session log"
-        description={sessions.length ? `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}, newest first.` : undefined}
+        description={allSessions.length ? `${allSessions.length} ${allSessions.length === 1 ? "session" : "sessions"}, newest first.` : undefined}
       />
 
       {sessions.length === 0 ? (
@@ -88,6 +99,15 @@ export default async function SessionsPage({ params }: { params: Promise<{ id: s
             </li>
           ))}
         </ol>
+      )}
+      {allSessions.length > sessions.length && (
+        <div className="flex justify-center pt-2" data-print-hide>
+          <Button asChild variant="secondary">
+            <Link href={`/clients/${id}/sessions?show=${limit + PAGE}`} scroll={false} prefetch={false}>
+              Show {Math.min(PAGE, allSessions.length - sessions.length)} older sessions ({allSessions.length - sessions.length} more)
+            </Link>
+          </Button>
+        </div>
       )}
     </div>
   );

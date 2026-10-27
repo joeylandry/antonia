@@ -1,6 +1,6 @@
-# Antonia
+# FitnessTracker
 
-Client management and progress tracking for a personal trainer. Private, single-trainer today, multi-trainer ready.
+Client management and progress tracking for a personal trainer (built for Antonia). Private, single-trainer today, multi-trainer ready.
 
 - Log sessions (exercise, sets, reps, weight, timed holds) with last-time hints.
 - Charts per exercise with date ranges, lift goals with live progress, optional body measurements.

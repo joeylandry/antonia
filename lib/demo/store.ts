@@ -19,6 +19,7 @@ import type {
 import type { ClientInput } from "@/lib/validation/client";
 import type { GoalInput } from "@/lib/validation/goal";
 import type { SessionInput } from "@/lib/validation/session";
+import { buildSeed } from "./seed";
 import { DEMO_TRAINER } from "./mode";
 
 /* All people, numbers and notes below are invented sample data. */
@@ -36,80 +37,10 @@ type State = {
 const globalForDemo = globalThis as unknown as { __antoniaDemo?: State };
 const TZ = "America/New_York";
 const today = () => todayIn(globalForDemo.__antoniaDemo?.profile.timezone ?? TZ);
-const rep = (n: number, reps: number, weight?: number): SetEntry[] => Array.from({ length: n }, () => ({ reps, ...(weight ? { weight } : {}) }));
 
 function seed(): State {
-  const t = todayIn(TZ);
-  const ago = (n: number) => addDays(t, -n);
-  const ahead = (n: number) => addDays(t, n);
-  const s: State = { profile: { displayName: DEMO_TRAINER.displayName, timezone: TZ }, clients: [], exercises: [], sessions: [], goals: [], metrics: [], notes: [] };
-
-  const ex = (name: string) => {
-    let e = s.exercises.find((x) => x.name.toLowerCase() === name.toLowerCase());
-    if (!e) s.exercises.push((e = { id: randomUUID(), name }));
-    return e;
-  };
-  const client = (c: Partial<Client> & { fullName: string }): Client => {
-    const full: Client = {
-      id: randomUUID(), kind: "personal_training", status: "active", primaryGoal: null, healthNotes: null, email: null, phone: null,
-      startDate: null, assessmentDate: ago(30), nextReviewDate: null, lastReviewedOn: null, sessionLengthMin: null, sessionsPerWeek: null,
-      archivedAt: null, createdAt: new Date(Date.now() - 40 * 86_400_000), ...c,
-    };
-    s.clients.push(full);
-    return full;
-  };
-  const session = (clientId: string, daysAgo: number, focus: string, entries: [string, SetEntry[], string?][], notes?: string) => {
-    s.sessions.push({
-      id: randomUUID(), clientId, sessionDate: ago(daysAgo), focus, notes: notes ?? null,
-      entries: entries.map(([name, sets, n], i) => ({ id: randomUUID(), exerciseId: ex(name).id, exerciseName: name, position: i, sets, notes: n ?? null })),
-    });
-  };
-
-  const jordan = client({
-    fullName: "Jordan Rivera", primaryGoal: "Squatting 180 by end of Oct, 250 by March; benching 130.", startDate: ago(21), assessmentDate: ago(28),
-    nextReviewDate: ahead(9), sessionLengthMin: 60, sessionsPerWeek: 2, healthNotes: "Old left knee tweak; avoid deep lunges.", email: "jordan@example.com",
-  });
-  session(jordan.id, 21, "Lower Body", [
-    ["Goblet Squat", [{ reps: 12, weight: 24 }, { reps: 12, weight: 24 }], "Felt easy, focus on feet hips-width apart"],
-    ["Dumbbell RDL", [{ reps: 12, weight: 15 }, { reps: 12, weight: 20 }], "Bending knees and letting gravity take you down"],
-    ["Lateral Band Walk", rep(2, 8), "Orange band, steps farther with the right leg"],
-  ]);
-  session(jordan.id, 20, "Upper Body", [
-    ["Dumbbell Bench Press", [{ reps: 12, weight: 15 }, { reps: 14, weight: 15 }], "Good angles"],
-    ["Seated Row", [{ reps: 12, weight: 25 }, { reps: 10, weight: 25 }, { reps: 5, weight: 55 }], "Shoulders rolled, good form"],
-    ["High Plank", [{ seconds: 20 }, { seconds: 40 }], "20 seconds felt easy so we moved to 40s"],
-  ]);
-  for (const [d, w] of [[14, 95], [10, 105], [7, 115], [3, 125]] as const) {
-    session(jordan.id, d, "Lower Body", [["Back Squat", [{ reps: 8, weight: w - 20 }, { reps: 5, weight: w }], "Depth improving"], ["Leg Press", rep(2, 12, 55 + (21 - d) * 2)]]);
-  }
-  session(jordan.id, 5, "Upper Body", [["Dumbbell Bench Press", [{ reps: 10, weight: 25 }, { reps: 8, weight: 30 }]], ["Bench Press", [{ reps: 5, weight: 85 }, { reps: 5, weight: 95 }]]]);
-  session(jordan.id, 1, "Fundamentals / Full Body Day", [["Leg Press", [{ reps: 12, weight: 55 }, { reps: 12, weight: 70 }]], ["KB Deadlift", rep(2, 12, 32)], ["Heel Slides", rep(2, 10)], ["90/90s", rep(2, 10)], ["Cossack Squat", rep(2, 12)]]);
-  s.goals.push(
-    { id: randomUUID(), clientId: jordan.id, kind: "lift", title: "Squat 180 lb by end of October", exerciseId: ex("Back Squat").id, exerciseName: "Back Squat", targetValue: 180, targetDate: ahead(4), status: "active", achievedOn: null },
-    { id: randomUUID(), clientId: jordan.id, kind: "lift", title: "Squat 250 lb by March", exerciseId: ex("Back Squat").id, exerciseName: "Back Squat", targetValue: 250, targetDate: ahead(130), status: "active", achievedOn: null },
-    { id: randomUUID(), clientId: jordan.id, kind: "lift", title: "Bench 130 lb", exerciseId: ex("Bench Press").id, exerciseName: "Bench Press", targetValue: 130, targetDate: null, status: "active", achievedOn: null },
-  );
-  const bw: Metric = { id: randomUUID(), clientId: jordan.id, name: "Body weight", unit: "lb", direction: "neutral" };
-  s.metrics.push({ metric: bw, entries: ([[21, 168.4], [14, 167.8], [7, 168.2], [1, 167.1]] as const).map(([d, v]) => ({ id: randomUUID(), metricId: bw.id, entryDate: ago(d), value: v, note: null })) });
-  s.notes.push({ id: randomUUID(), clientId: jordan.id, body: "Prefers morning sessions. Training for a fall hiking trip.", createdAt: new Date(Date.now() - 3 * 86_400_000) });
-
-  const people: [string, "personal_training" | "fitness_assessment", "active" | "on_hold" | "inactive", string | null, number | null, number | null][] = [
-    ["Casey Morgan", "personal_training", "active", "Building a shelf, losing weight, gaining strength.", 2, 8],
-    ["Riley Chen", "personal_training", "active", "Getting stronger, getting back into lifting heavy.", -3, 30],
-    ["Sam Okafor", "fitness_assessment", "active", "Preparing to hike the 4000 footers.", 6, null],
-    ["Taylor Brooks", "personal_training", "on_hold", "Gaining strength, improving shoulder problems.", null, 40],
-    ["Avery Nguyen", "fitness_assessment", "inactive", null, null, null],
-    ["Morgan Delgado", "personal_training", "active", "Improving BMD, general strength.", 20, 3],
-    ["Quinn Abernathy-Whitfield", "personal_training", "active", "Build strength steadily, travel more, protect the lower back, and feel confident carrying groceries up three flights of stairs.", 12, 15],
-  ];
-  for (const [fullName, kind, status, goal, review, last] of people) {
-    const c = client({ fullName, kind, status, primaryGoal: goal, nextReviewDate: review == null ? null : ahead(review) });
-    if (last != null) {
-      session(c.id, last, "Full Body", [["Goblet Squat", rep(3, 10, 20)], ["Seated Row", rep(3, 10, 40)]]);
-      session(c.id, last + 7, "Full Body", [["Goblet Squat", rep(3, 10, 15)], ["Seated Row", rep(3, 10, 35)]]);
-    }
-  }
-  return s;
+  const data = buildSeed(todayIn(TZ));
+  return { profile: { displayName: DEMO_TRAINER.displayName, timezone: TZ }, ...data };
 }
 
 function st(): State {

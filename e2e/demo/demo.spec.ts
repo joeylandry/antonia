@@ -17,7 +17,7 @@ test.describe("demo mode (no Supabase configured)", () => {
     await expect(page.getByRole("link", { name: /Jordan Rivera/ })).toBeVisible();
     await page.getByRole("link", { name: /Jordan Rivera/ }).click();
     await expect(page.getByRole("heading", { name: "Jordan Rivera", level: 1 })).toBeVisible();
-    await expect(page.getByText("Squat 180 lb by end of October")).toBeVisible();
+    await expect(page.getByText("Back Squat 180 lb").first()).toBeVisible();
     await expect(page.getByText("Old left knee tweak")).toBeVisible();
 
     await page.getByRole("link", { name: "Progress" }).click();
@@ -29,6 +29,36 @@ test.describe("demo mode (no Supabase configured)", () => {
     await expect(page.getByRole("progressbar").first()).toBeVisible();
     await page.getByRole("link", { name: "Sessions" }).click();
     await expect(page.getByText("Leg Press").first()).toBeVisible();
+  });
+
+  test("a year-long client has a full history with paging and a busy chart", async ({ page }) => {
+    await page.goto("/clients");
+    await page.getByRole("link", { name: /Casey Morgan/ }).click();
+    await page.waitForURL(/\/clients\/[0-9a-f-]{36}$/);
+    const base = page.url();
+    await page.goto(`${base}/sessions`);
+    await expect(page.getByText(/9\d sessions, newest first/)).toBeVisible();
+    const cards = page.locator("ol > li");
+    await expect(cards).toHaveCount(15);
+    await page.getByRole("link", { name: /older sessions/ }).click();
+    await expect(cards).toHaveCount(30);
+
+    await page.goto(`${base}/progress`);
+    await page.getByLabel("Exercise", { exact: true }).selectOption({ label: "Goblet Squat" });
+    await expect(page.getByRole("img", { name: /Top weight for Goblet Squat over time\. \d{2,} sessions/ })).toBeVisible();
+    await page.getByRole("button", { name: "3M" }).first().click();
+    await expect(page.getByRole("img", { name: /Top weight for Goblet Squat over time/ })).toBeVisible();
+  });
+
+  test("the roster looks full: many clients, every status, brand name shown", async ({ page }) => {
+    await page.goto("/clients");
+    await expect(page.getByText("13 clients").or(page.getByText(/1[0-3] clients/))).toBeVisible();
+    await expect(page.getByText("On hold").first()).toBeVisible();
+    await expect(page.getByText("Fitness assessment").first()).toBeVisible();
+    await expect(page.getByText("FitnessTracker").first()).toBeVisible();
+    await expect(page).toHaveTitle(/FitnessTracker/);
+    await page.goto("/clients?archived=1");
+    await expect(page.getByRole("link", { name: /Marcus Bell/ })).toBeVisible();
   });
 
   test("adding a client and logging a session works", async ({ page }) => {
