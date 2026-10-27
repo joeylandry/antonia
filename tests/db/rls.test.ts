@@ -82,7 +82,11 @@ describe.skipIf(!url)("row level security", () => {
     const [cB] = await sql`insert into public.clients (trainer_id, full_name) values (${B}, 'Client of B') returning id`;
     const [s] = await sql`insert into public.sessions (trainer_id, client_id, session_date) values (${B}, ${cB.id}, '2026-10-06') returning id`;
     await expect(
-      as(B, (tx) => tx`insert into public.session_entries (trainer_id, session_id, exercise_id) values (${B}, ${s.id}, ${ex.id})`),
+      // Exercise references are deferred to commit; check immediately because `as` rolls back.
+      as(B, async (tx) => {
+        await tx`set constraints all immediate`;
+        return tx`insert into public.session_entries (trainer_id, session_id, exercise_id) values (${B}, ${s.id}, ${ex.id})`;
+      }),
     ).rejects.toThrow(/foreign key/);
   });
 
@@ -90,6 +94,21 @@ describe.skipIf(!url)("row level security", () => {
     await expect(
       as(A, (tx) => tx`insert into public.trainers (id) values (gen_random_uuid())`),
     ).rejects.toThrow(/permission denied/);
+  });
+
+  it("deleting a trainer account removes all of their data, and an exercise with history cannot be deleted alone", async () => {
+    const id = "00000000-0000-4000-8000-0000000000cc";
+    await sql`delete from auth.users where id = ${id}`;
+    await sql`insert into auth.users (id, email) values (${id}, 'c@test.local')`;
+    const [cl] = await sql`insert into public.clients (trainer_id, full_name) values (${id}, 'Temp') returning id`;
+    const [ex] = await sql`insert into public.exercises (trainer_id, name) values (${id}, 'Temp Lift') returning id`;
+    const [s] = await sql`insert into public.sessions (trainer_id, client_id, session_date) values (${id}, ${cl.id}, '2026-10-01') returning id`;
+    await sql`insert into public.session_entries (trainer_id, session_id, exercise_id) values (${id}, ${s.id}, ${ex.id})`;
+    await sql`insert into public.goals (trainer_id, client_id, kind, title, exercise_id, target_value) values (${id}, ${cl.id}, 'lift', 'g', ${ex.id}, 100)`;
+    await expect(sql`delete from public.exercises where id = ${ex.id}`).rejects.toThrow(/foreign key/);
+    await sql`delete from auth.users where id = ${id}`;
+    const left = await sql`select (select count(*) from public.clients where trainer_id = ${id}) as c, (select count(*) from public.exercises where trainer_id = ${id}) as e`;
+    expect(Number(left[0].c) + Number(left[0].e)).toBe(0);
   });
 
   it("rejects invalid data at the database level", async () => {
