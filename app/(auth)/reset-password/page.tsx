@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { isDemo } from "@/lib/demo/mode";
 import { createClient } from "@/lib/supabase/server";
 import { NewPasswordForm } from "@/components/forms/new-password-form";
 
 export const metadata: Metadata = { title: "Choose a new password" };
 
 export default async function ResetPasswordPage() {
+  if (isDemo()) redirect("/");
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect("/login");

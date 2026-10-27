@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:migrate": "tsx scripts/migrate.ts",
     "test:e2e": "playwright test",
-    "db:seed:dev": "tsx scripts/seed-dev.ts"
+    "db:seed:dev": "tsx scripts/seed-dev.ts",
+    "test:e2e:demo": "playwright test -c playwright.demo.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",

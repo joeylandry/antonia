@@ -11,7 +11,7 @@ const nav = [
   { href: "/settings", label: "Settings", icon: <Settings /> },
 ] as const;
 
-export function AppShell({ trainer, children }: { trainer: Trainer; children: React.ReactNode }) {
+export function AppShell({ trainer, demo, children }: { trainer: Trainer; demo?: boolean; children: React.ReactNode }) {
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
       <aside
@@ -34,6 +34,11 @@ export function AppShell({ trainer, children }: { trainer: Trainer; children: Re
       </aside>
 
       <div className="flex min-w-0 flex-col pb-20 lg:pb-0">
+        {demo && (
+          <div data-print-hide className="border-b border-warning/30 bg-warning-soft px-4 py-2 text-center text-xs text-warning">
+            <strong className="font-semibold">Demo</strong> · sample clients and numbers, nothing real. Changes reset when the server restarts.
+          </div>
+        )}
         <header
           data-print-hide
           className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden"

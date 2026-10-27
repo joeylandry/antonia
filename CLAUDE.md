@@ -12,3 +12,4 @@ Always create Git branches with clear, descriptive names directly relevant to th
 - Calendar dates are `YYYY-MM-DD` strings; never convert them through `Date` in a local zone. Use lib/dates.ts and the trainer's time zone for "today".
 - Server actions and route handlers must call `requireTrainer()` / `getTrainer()` first and validate input with the Zod schemas in lib/validation.
 - Checks before pushing: `npm run typecheck && npm run lint && npm test`, and `npm run test:e2e` for UI/auth changes.
+- Demo mode (lib/demo/): when Supabase/DB env vars are absent the data layer is served from in-memory sample data. Any new function in lib/data/*.ts needs a matching `isDemo()` branch backed by lib/demo/store.ts, and `npm run test:e2e:demo` must pass.

@@ -14,6 +14,7 @@ process.env.E2E_AUTH_URL = `http://127.0.0.1:${AUTH_PORT}`;
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
+  testIgnore: "**/demo/**",
   fullyParallel: false,
   workers: 1,
   retries: 0,

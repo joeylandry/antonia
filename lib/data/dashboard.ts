@@ -1,4 +1,6 @@
 import "server-only";
+import { isDemo } from "@/lib/demo/mode";
+import * as demo from "@/lib/demo/store";
 import { withTrainer } from "@/lib/db/client";
 import { addDays } from "@/lib/dates";
 import { goalProgress } from "@/lib/domain/progress";
@@ -6,6 +8,7 @@ import { goalProgress } from "@/lib/domain/progress";
 export type RecentSession = { id: string; clientId: string; clientName: string; sessionDate: string; focus: string | null; exerciseCount: number };
 
 export async function recentSessions(trainerId: string, limit = 6): Promise<RecentSession[]> {
+  if (isDemo()) return demo.recentSessions(limit);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<{ id: string; client_id: string; full_name: string; session_date: string; focus: string | null; exercise_count: number }[]>`
       select s.id, s.client_id, c.full_name, s.session_date, s.focus,
@@ -30,6 +33,7 @@ export type GoalDue = {
 
 /** Active lift goals due within `withinDays` (or already overdue), with progress. */
 export async function goalsDueSoon(trainerId: string, today: string, withinDays = 21): Promise<GoalDue[]> {
+  if (isDemo()) return demo.goalsDueSoon(today, withinDays);
   const until = addDays(today, withinDays);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<{
@@ -61,6 +65,7 @@ export async function goalsDueSoon(trainerId: string, today: string, withinDays 
 }
 
 export async function sessionsThisWeek(trainerId: string, today: string): Promise<number> {
+  if (isDemo()) return demo.sessionsThisWeek(today);
   return withTrainer(trainerId, async (tx) => {
     const [r] = await tx<{ n: number }[]>`
       select count(*)::int as n from public.sessions s join public.clients c on c.id = s.client_id

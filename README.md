@@ -31,6 +31,10 @@ Every row of client data has a `trainer_id`; composite foreign keys make cross-t
 
 Layout: `app/` routes · `components/` UI (`components/ui` is the design-system primitives) · `lib/domain` pure logic (unit tested) · `lib/data` SQL access · `lib/validation` Zod schemas shared by forms and server actions · `db/` migrations and local shim · `e2e/` browser tests.
 
+## Demo mode
+
+If `DATABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL` is missing, the app starts in **demo mode**: no sign-in, a built-in set of fictional clients, sessions, goals and measurements, and an amber "Demo" banner. Everything works (add clients, log sessions, charts, exports), but data lives in server memory and resets on restart. It switches off automatically once both settings exist. Use it to show the app to someone before Supabase is set up.
+
 ## Deploy
 
 1. **Supabase project** (free tier is fine). Under *Authentication → Providers*, keep Email enabled and **turn off "Allow new users to sign up"**. Create Antonia's account under *Authentication → Users → Add user* (tick "Auto Confirm User").
