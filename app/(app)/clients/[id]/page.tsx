@@ -125,7 +125,7 @@ export default async function ClientOverviewPage({ params }: { params: Promise<{
             <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
               {recent.map((s) => (
                 <li key={s.id}>
-                  <Link href={`/clients/${id}/sessions/${s.id}`} className="block px-4 py-3 transition-colors hover:bg-muted/60">
+                  <Link href={`/clients/${id}/sessions/${s.id}`} prefetch={false} className="block px-4 py-3 transition-colors hover:bg-muted/60">
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="font-medium">{formatDate(s.sessionDate, year)}</span>
                       <span className="truncate text-sm text-muted-foreground">{s.focus}</span>

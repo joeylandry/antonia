@@ -23,7 +23,7 @@ export default async function ClientLayout({ children, params }: { children: Rea
   return (
     <div className="space-y-6">
       <div data-print-hide>
-        <Link href="/clients" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/clients" className="-my-2 inline-flex items-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground">
           <ChevronLeft className="size-4" aria-hidden /> Clients
         </Link>
       </div>

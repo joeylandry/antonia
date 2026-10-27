@@ -10,6 +10,33 @@ export const Dialog = D.Root;
 export const DialogTrigger = D.Trigger;
 export const DialogClose = D.Close;
 
+/**
+ * Dialog content that focuses its first field on open and returns focus to the
+ * element that opened it on close. Rendered inside the portal, so it only mounts
+ * (and captures the opener) when the dialog actually opens.
+ */
+function FocusReturnContent(props: React.ComponentPropsWithoutRef<typeof D.Content>) {
+  const [opener] = React.useState(() => document.activeElement as HTMLElement | null);
+  return (
+    <D.Content
+      onOpenAutoFocus={(e) => {
+        const first = (e.currentTarget as HTMLElement).querySelector<HTMLElement>("input:not([type=hidden]), textarea, select");
+        if (first) {
+          e.preventDefault();
+          first.focus();
+        }
+      }}
+      onCloseAutoFocus={(e) => {
+        if (opener && document.contains(opener)) {
+          e.preventDefault();
+          opener.focus();
+        }
+      }}
+      {...props}
+    />
+  );
+}
+
 const overlay =
   "fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] animate-fade-in";
 
@@ -23,7 +50,7 @@ export function DialogContent({
   return (
     <D.Portal>
       <D.Overlay className={overlay} />
-      <D.Content
+      <FocusReturnContent
         className={cn(
           "fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-surface-raised p-6 shadow-md",
           className,
@@ -45,7 +72,7 @@ export function DialogContent({
         >
           <X className="size-4" />
         </D.Close>
-      </D.Content>
+      </FocusReturnContent>
     </D.Portal>
   );
 }

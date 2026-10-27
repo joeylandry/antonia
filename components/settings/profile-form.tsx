@@ -38,7 +38,7 @@ export function ProfileForm({ displayName, timezone }: { displayName: string; ti
         </Select>
       </Field>
       {detected !== tz && (
-        <button type="button" onClick={() => setTz(detected)} className="text-sm text-primary underline-offset-4 hover:underline">
+        <button type="button" onClick={() => setTz(detected)} className="-my-2 py-2 text-sm text-primary underline-offset-4 hover:underline">
           Use this device&apos;s time zone ({detected.replace(/_/g, " ")})
         </button>
       )}

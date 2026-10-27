@@ -32,11 +32,11 @@ export function ThemeToggle({ className }: { className?: string }) {
             title={label}
             onClick={() => setTheme(value)}
             className={cn(
-              "inline-flex size-7 items-center justify-center rounded-[5px] text-muted-foreground transition-colors hover:text-foreground",
+              "inline-flex size-9 items-center md:size-7 justify-center rounded-[5px] text-muted-foreground transition-colors hover:text-foreground",
               active && "bg-surface text-foreground shadow-sm",
             )}
           >
-            <Icon className="size-3.5" />
+            <Icon className="size-4 md:size-3.5" />
           </button>
         );
       })}

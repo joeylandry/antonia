@@ -19,7 +19,7 @@ export function AppShell({ trainer, children }: { trainer: Trainer; children: Re
         className="hidden border-r border-border bg-surface lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col"
       >
         <div className="px-5 pb-4 pt-6">
-          <Link href="/" className="inline-block">
+          <Link href="/" prefetch={false} className="inline-block">
             <Wordmark />
           </Link>
         </div>
@@ -38,7 +38,7 @@ export function AppShell({ trainer, children }: { trainer: Trainer; children: Re
           data-print-hide
           className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden"
         >
-          <Link href="/">
+          <Link href="/" prefetch={false}>
             <Wordmark />
           </Link>
           <UserMenu trainer={trainer} compact />

@@ -23,6 +23,7 @@ export function ClientTabs({ clientId }: { clientId: string }) {
             <li key={t.href}>
               <Link
                 href={t.href}
+                prefetch={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative inline-block px-2.5 py-2.5 sm:px-3 text-sm font-medium transition-colors",

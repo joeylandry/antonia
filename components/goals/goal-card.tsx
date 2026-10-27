@@ -92,7 +92,7 @@ export function GoalCard({
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={progress.percent}
-                    className="h-2 overflow-hidden rounded-full bg-muted"
+                    className="h-2 overflow-hidden rounded-full bg-border-strong/40"
                   >
                     <div className={cn("h-full rounded-full transition-[width]", progress.achieved ? "bg-success" : "bg-primary")} style={{ width: `${progress.percent}%` }} />
                   </div>

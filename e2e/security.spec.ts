@@ -54,6 +54,23 @@ test.describe("data isolation between trainers", () => {
 });
 
 test.describe("response hardening", () => {
+  test("recovery redirects cannot leave the site", async ({ request }) => {
+    for (const next of ["/\t/evil.example", "//evil.example", "https://evil.example", "/\\evil.example"]) {
+      const res = await request.get(`/auth/confirm?token_hash=bogus&type=recovery&next=${encodeURIComponent(next)}`, { maxRedirects: 0 });
+      const location = res.headers()["location"] ?? "";
+      expect(new URL(location, "http://localhost:3100").host).toBe("localhost:3100");
+    }
+  });
+
+  test("security headers are present", async ({ request }) => {
+    const res = await request.get("/login");
+    const h = res.headers();
+    expect(h["x-frame-options"]).toBe("DENY");
+    expect(h["x-content-type-options"]).toBe("nosniff");
+    expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(h["referrer-policy"]).toBeTruthy();
+  });
+
   test("pages are not indexable and no secrets reach the browser", async ({ page }) => {
     await page.goto("/login");
     expect(await page.locator('meta[name="robots"]').getAttribute("content")).toContain("noindex");

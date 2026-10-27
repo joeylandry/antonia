@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { Controller, FormProvider, useFieldArray, useForm, useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Copy, History, Plus, Timer, Trash2, X } from "lucide-react";
@@ -82,6 +82,21 @@ export function SessionEditor({
     );
   }
 
+  /**
+   * Enter moves to the next field instead of saving, so a stray keypress can't
+   * commit a half-built log. Cmd/Ctrl+Enter saves.
+   */
+  function onKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if (e.key !== "Enter" || e.defaultPrevented) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "TEXTAREA" || target.tagName === "BUTTON") return;
+    e.preventDefault();
+    const form = e.currentTarget;
+    if (e.metaKey || e.ctrlKey) return form.requestSubmit();
+    const fields = [...form.querySelectorAll<HTMLElement>("input:not([type=hidden]):not([disabled]), textarea")];
+    fields[fields.indexOf(target) + 1]?.focus();
+  }
+
   const onSubmit = handleSubmit((values) => {
     setFormError(null);
     const named = values.entries.filter((e) => e.exerciseName.trim() !== "");
@@ -140,7 +155,7 @@ export function SessionEditor({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={onSubmit} className="space-y-6" noValidate>
+      <form onSubmit={onSubmit} onKeyDown={onKeyDown} className="space-y-6" noValidate>
         {formError && <FormBanner tone="error">{formError}</FormBanner>}
 
         <div className="grid gap-4 sm:grid-cols-[11rem_1fr]">
@@ -182,6 +197,7 @@ export function SessionEditor({
             <EntryCard
               key={field.id}
               index={index}
+              autoFocusName={index === 0 && !session}
               listId={listId}
               lastByName={lastByName}
               onRemove={entries.fields.length > 1 ? () => entries.remove(index) : undefined}
@@ -234,7 +250,9 @@ function EntryCard({
   listId,
   lastByName,
   onRemove,
+  autoFocusName,
 }: {
+  autoFocusName?: boolean;
   index: number;
   listId: string;
   lastByName: LastPerformanceMap;
@@ -250,6 +268,9 @@ function EntryCard({
   const last = lastByName[name.trim().toLowerCase()];
   const entryErrors = formState.errors.entries?.[index];
   const nameId = `entry-${index}-name`;
+  useEffect(() => {
+    if (autoFocusName) document.getElementById(nameId)?.focus();
+  }, [autoFocusName, nameId]);
 
   function addSet() {
     const prev = getValues(`entries.${index}.sets`).at(-1);
@@ -289,7 +310,7 @@ function EntryCard({
               </span>
               <button
                 type="button"
-                className="font-medium text-primary underline-offset-2 hover:underline"
+                className="-my-2 py-2 font-medium text-primary underline-offset-2 hover:underline"
                 onClick={() => setValue(`entries.${index}.sets`, last.sets.length ? last.sets.map(toSetValues) : [emptySet()], { shouldDirty: true })}
               >
                 Use these sets

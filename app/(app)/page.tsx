@@ -83,7 +83,7 @@ export default async function TodayPage() {
             You&apos;re all caught up. No reviews due, no goals at risk, and everyone has trained recently.
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {reviews.length > 0 && (
               <AttentionList icon={<CalendarClock />} title="Reviews">
                 {reviews.map((c) => {
@@ -133,7 +133,7 @@ export default async function TodayPage() {
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {recent.map((s) => (
               <li key={s.id}>
-                <Link href={`/clients/${s.clientId}/sessions/${s.id}`} className="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-muted/60">
+                <Link href={`/clients/${s.clientId}/sessions/${s.id}`} prefetch={false} className="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-muted/60">
                   <Avatar name={s.clientName} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{s.clientName}</div>
@@ -156,7 +156,7 @@ export default async function TodayPage() {
 
 function AttentionList({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground-soft [&_svg]:size-4 [&_svg]:text-muted-foreground">
         {icon} {title}
       </h3>
@@ -168,14 +168,14 @@ function AttentionList({ icon, title, children }: { icon: React.ReactNode; title
 function AttentionRow({ href, name, detail, tone }: { href: string; name: string; detail: string; tone: "danger" | "warning" | "success" | "neutral" }) {
   return (
     <li>
-      <Link href={href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/60">
+      <Link href={href} prefetch={false} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/60">
         <span
           aria-hidden
           className={cn("size-2 shrink-0 rounded-full", tone === "danger" && "bg-danger", tone === "warning" && "bg-warning", tone === "success" && "bg-success", tone === "neutral" && "bg-border-strong")}
         />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{name}</div>
-          <div className={cn("text-sm", tone === "danger" ? "text-danger" : "text-muted-foreground")}>{detail}</div>
+          <div className={cn("truncate text-sm", tone === "danger" ? "text-danger" : "text-muted-foreground")}>{detail}</div>
         </div>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </Link>

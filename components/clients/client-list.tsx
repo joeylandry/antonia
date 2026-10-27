@@ -99,7 +99,7 @@ export function ClientList({ clients, today, archived }: { clients: ClientListIt
               aria-pressed={filter === f.value}
               onClick={() => setFilter(f.value)}
               className={cn(
-                "rounded-full border px-3 py-1 text-[0.8125rem] font-medium transition-colors",
+                "rounded-full border px-3.5 py-2 text-[0.8125rem] font-medium transition-colors md:py-1",
                 filter === f.value
                   ? "border-transparent bg-primary-soft text-primary-soft-foreground"
                   : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -123,6 +123,7 @@ export function ClientList({ clients, today, archived }: { clients: ClientListIt
               <li key={c.id}>
                 <Link
                   href={`/clients/${c.id}`}
+                  prefetch={false}
                   className="group flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                 >
                   <Avatar name={c.fullName} />
