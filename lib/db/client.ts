@@ -23,8 +23,17 @@ function connect(): Sql {
   });
 }
 
-export const sql: Sql = globalForDb.__antoniaSql ?? connect();
-if (process.env.NODE_ENV !== "production") globalForDb.__antoniaSql = sql;
+/**
+ * Created on first use, not at import time: `next build` imports every route to
+ * collect page data, and the build must not need DATABASE_URL (or a database).
+ */
+function getSql(): Sql {
+  if (globalForDb.__antoniaSql) return globalForDb.__antoniaSql;
+  const client = connect();
+  // Reused across requests (and across dev hot reloads) so connections aren't leaked.
+  globalForDb.__antoniaSql = client;
+  return client;
+}
 
 /**
  * Runs `fn` in a transaction acting as `trainerId` under Row Level Security.
@@ -32,7 +41,7 @@ if (process.env.NODE_ENV !== "production") globalForDb.__antoniaSql = sql;
  * read or write another trainer's rows.
  */
 export async function withTrainer<T>(trainerId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
-  return sql.begin(async (tx) => {
+  return getSql().begin(async (tx) => {
     await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: trainerId, role: "authenticated" })}, true)`;
     await tx`select set_config('role', 'authenticated', true)`;
     return fn(tx);
