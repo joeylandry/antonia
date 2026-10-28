@@ -10,9 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate": "tsx scripts/migrate.ts",
-    "test:e2e": "playwright test",
-    "db:seed:dev": "tsx scripts/seed-dev.ts",
-    "test:e2e:demo": "playwright test -c playwright.demo.config.ts"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",

@@ -31,16 +31,12 @@ Every row of client data has a `trainer_id`; composite foreign keys make cross-t
 
 Layout: `app/` routes · `components/` UI (`components/ui` is the design-system primitives) · `lib/domain` pure logic (unit tested) · `lib/data` SQL access · `lib/validation` Zod schemas shared by forms and server actions · `db/` migrations and local shim · `e2e/` browser tests.
 
-## Demo mode
-
-If `DATABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL` is missing, the app starts in **demo mode**: no sign-in, a built-in set of fictional clients, sessions, goals and measurements, and an amber "Demo" banner. Everything works (add clients, log sessions, charts, exports), but data lives in server memory and resets on restart. It switches off automatically once both settings exist. Use it to show the app to someone before Supabase is set up.
-
 ## Deploy
 
-1. **Supabase project** (free tier is fine). Under *Authentication → Providers*, keep Email enabled and **turn off "Allow new users to sign up"**. Create Antonia's account under *Authentication → Users → Add user* (tick "Auto Confirm User").
-2. **Email template** for password reset (*Authentication → Email Templates → Reset Password*): set the link to
-   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`
-   and set *Site URL* and *Redirect URLs* to your deployed origin.
+1. **Supabase project** (free tier is fine). Under *Authentication → Providers*, keep Email enabled and **"Allow new users to sign up" on** so the trainer can register at `/signup`.
+2. **Email templates** (*Authentication → Email Templates*), with *Site URL* and *Redirect URLs* set to your deployed origin:
+   - *Confirm signup*: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/` (the default template also works, but only when the link is opened in the same browser that signed up).
+   - *Reset Password*: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`.
 3. **Apply the schema:** `DATABASE_URL="<direct or session-pooler connection string>" npm run db:migrate` (safe to re-run; each migration applies once).
 4. **Host** on Vercel (or any Node host). Set environment variables:
 
@@ -51,7 +47,8 @@ If `DATABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL` is missing, the app starts in **
    | `DATABASE_URL` | Project Settings → Database → Connection string, **transaction pooler (port 6543)** | **yes** |
    | `NEXT_PUBLIC_SITE_URL` | your deployed origin, e.g. `https://app.example.com` | no |
 
-5. Sign in, set your name and time zone under Settings.
+5. Open `/signup` and create the account (name, email, password; the time zone is taken from the browser and can be changed under Settings). With email confirmation on, click the link in the confirmation email, then sign in.
+6. Once every trainer who needs an account has one, you can turn "Allow new users to sign up" back off in Supabase. Any account that does get created only ever sees its own data (RLS), but a private deployment has no reason to accept strangers.
 
 **Hardening notes.** `NEXT_PUBLIC_SITE_URL` is required in production (reset-email links never use request headers). The app sends a Content-Security-Policy and the usual framing/sniffing/referrer headers (`next.config.ts`). For defence in depth, point `DATABASE_URL` at a dedicated login role that is `NOBYPASSRLS` and a member of `authenticated` instead of the `postgres` superuser role; RLS is then enforced even if a future query were ever built unsafely. Every future migration must enable RLS and add its own grants, since Supabase auto-grants new tables to `anon`/`authenticated`.
 
@@ -78,8 +75,6 @@ DATABASE_URL=postgres://postgres@127.0.0.1:5432/antonia_dev npm run db:migrate
 
 `e2e/support/fake-auth-server.mjs` is a **test-only** stand-in for the few Supabase Auth endpoints the app uses. It exists so the browser suite runs without Docker. It is never used in production. For day-to-day development against the real thing, use a Supabase project or `supabase start`.
 
-`npm run db:seed:dev -- you@example.test` fills a **local** database with fictional clients (it refuses non-localhost URLs).
-
 ### Checks
 
 ```bash
@@ -92,6 +87,6 @@ E2E_ADMIN_DATABASE_URL=... npm run test:e2e                                  # b
 
 - Weights are pounds only; there is no unit setting yet.
 - No import from the existing Excel workbook (needs the real file).
-- One trainer per deployment in practice: there is no sign-up or invite flow, by design. Accounts are created in Supabase.
+- Sign-up is open whenever Supabase allows it; there is no invite or allowlist. Turn sign-ups off in Supabase once the intended accounts exist.
 - Theme preference is stored per device, not per account.
 - Password-reset email delivery uses Supabase's built-in mailer (rate limited); configure custom SMTP in Supabase for production volume.

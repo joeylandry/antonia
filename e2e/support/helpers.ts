@@ -32,7 +32,7 @@ export async function addClient(page: Page, name: string, goal?: string) {
   return page.url().split("/").pop()!;
 }
 
-export async function outbox(): Promise<{ email: string; token_hash: string }[]> {
+export async function outbox(): Promise<{ email: string; token_hash: string; type: string }[]> {
   return (await fetch(`${AUTH()}/__test/outbox`)).json();
 }
 
@@ -57,4 +57,10 @@ export async function logSession(
   }
   await page.getByRole("button", { name: "Save session" }).click();
   await page.waitForURL(`**/clients/${clientId}/sessions`);
+}
+
+/** Switches the test auth server between instant sign-up and email-confirmed sign-up. */
+export async function setConfirmSignups(confirmSignups: boolean) {
+  const res = await fetch(`${AUTH()}/__test/config`, { method: "POST", body: JSON.stringify({ confirmSignups }) });
+  expect(res.ok).toBeTruthy();
 }

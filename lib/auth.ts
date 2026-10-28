@@ -3,8 +3,6 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { withTrainer } from "@/lib/db/client";
-import { DEMO_TRAINER, isDemo } from "@/lib/demo/mode";
-import { profile as demoProfile } from "@/lib/demo/store";
 
 export type Trainer = {
   id: string;
@@ -18,7 +16,6 @@ export type Trainer = {
  * (getUser), never taken from an unverified cookie.
  */
 export const getTrainer = cache(async (): Promise<Trainer | null> => {
-  if (isDemo()) return { ...DEMO_TRAINER, displayName: demoProfile().displayName, timezone: demoProfile().timezone };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;

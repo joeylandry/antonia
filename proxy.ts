@@ -1,10 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Demo mode (no Supabase configured): no sign-in at all, everything is open.
-const isDemo = () => !process.env.DATABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/confirm"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/confirm"];
 
 /**
  * Keeps the Supabase session cookie fresh and bounces signed-out visitors to
@@ -12,7 +9,6 @@ const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/confirm"];
  * re-verifies the user and the database enforces ownership with RLS.
  */
 export async function proxy(request: NextRequest) {
-  if (isDemo()) return NextResponse.next({ request });
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -43,7 +39,7 @@ export async function proxy(request: NextRequest) {
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     return redirect;
   }
-  if (signedIn && path === "/login") {
+  if (signedIn && (path === "/login" || path === "/signup")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

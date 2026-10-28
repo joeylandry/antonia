@@ -1,6 +1,4 @@
 import "server-only";
-import { isDemo } from "@/lib/demo/mode";
-import * as demo from "@/lib/demo/store";
 import { withTrainer, type Tx } from "@/lib/db/client";
 import type { Exercise, SessionEntry, SetEntry, WorkoutSession } from "@/lib/domain/types";
 import type { SessionInput } from "@/lib/validation/session";
@@ -34,7 +32,6 @@ function assemble(sessions: SessionRow[], entries: EntryRow[]): WorkoutSession[]
 }
 
 export async function listSessions(trainerId: string, clientId: string): Promise<WorkoutSession[]> {
-  if (isDemo()) return demo.listSessions(clientId);
   return withTrainer(trainerId, async (tx) => {
     const sessions = await tx<SessionRow[]>`
       select id, client_id, session_date, focus, notes from public.sessions
@@ -49,7 +46,6 @@ export async function listSessions(trainerId: string, clientId: string): Promise
 }
 
 export async function getSession(trainerId: string, sessionId: string): Promise<WorkoutSession | null> {
-  if (isDemo()) return demo.getSession(sessionId);
   if (!/^[0-9a-f-]{36}$/i.test(sessionId)) return null;
   return withTrainer(trainerId, async (tx) => {
     const sessions = await tx<SessionRow[]>`
@@ -89,7 +85,6 @@ const cleanSets = (sets: SetEntry[]) =>
 
 /** Creates or replaces a session and its exercises atomically. Returns the session id, or null if not found. */
 export async function saveSession(trainerId: string, input: SessionInput, sessionId?: string): Promise<string | null> {
-  if (isDemo()) return demo.saveSession(input, sessionId);
   return withTrainer(trainerId, async (tx) => {
     let id = sessionId;
     if (id) {
@@ -118,7 +113,6 @@ export async function saveSession(trainerId: string, input: SessionInput, sessio
 }
 
 export async function deleteSessionRecord(trainerId: string, sessionId: string): Promise<boolean> {
-  if (isDemo()) return demo.deleteSessionRecord(sessionId);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`delete from public.sessions where id = ${sessionId} returning id`;
     return rows.length > 0;
@@ -127,7 +121,6 @@ export async function deleteSessionRecord(trainerId: string, sessionId: string):
 
 /** All exercises the trainer has used, most-used first, for the exercise picker. */
 export async function listExercises(trainerId: string): Promise<(Exercise & { uses: number })[]> {
-  if (isDemo()) return demo.listExercises();
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<{ id: string; name: string; uses: number }[]>`
       select x.id, x.name, count(e.id)::int as uses
@@ -141,7 +134,6 @@ export type LastPerformance = { exerciseId: string; date: string; sets: SetEntry
 
 /** The client's most recent performance of each exercise, optionally before a date (editing a past session). */
 export async function lastPerformances(trainerId: string, clientId: string, before?: string): Promise<Record<string, LastPerformance & { name: string }>> {
-  if (isDemo()) return demo.lastPerformances(clientId, before);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<{ exercise_id: string; name: string; session_date: string; sets: SetEntry[] }[]>`
       select distinct on (e.exercise_id) e.exercise_id, x.name, s.session_date, e.sets
@@ -160,7 +152,6 @@ export type HistoryRow = { exerciseId: string; exerciseName: string; date: strin
 
 /** Every logged exercise for a client, oldest first, used to build progress charts. */
 export async function exerciseHistory(trainerId: string, clientId: string): Promise<HistoryRow[]> {
-  if (isDemo()) return demo.exerciseHistory(clientId);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<{ exercise_id: string; name: string; session_date: string; sets: SetEntry[] }[]>`
       select e.exercise_id, x.name, s.session_date, e.sets
