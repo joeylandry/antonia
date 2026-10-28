@@ -1,11 +1,8 @@
 import "server-only";
-import { isDemo } from "@/lib/demo/mode";
-import * as demo from "@/lib/demo/store";
 import { withTrainer } from "@/lib/db/client";
 import type { Metric, MetricEntry } from "@/lib/domain/types";
 
 export async function listMetrics(trainerId: string, clientId: string): Promise<{ metric: Metric; entries: MetricEntry[] }[]> {
-  if (isDemo()) return demo.listMetrics(clientId);
   return withTrainer(trainerId, async (tx) => {
     const metrics = await tx<{ id: string; client_id: string; name: string; unit: string; direction: Metric["direction"] }[]>`
       select id, client_id, name, unit, direction from public.metrics where client_id = ${clientId} order by created_at`;
@@ -23,7 +20,6 @@ export async function listMetrics(trainerId: string, clientId: string): Promise<
 }
 
 export async function createMetric(trainerId: string, clientId: string, v: { name: string; unit: string; direction: string }): Promise<string> {
-  if (isDemo()) return demo.createMetric(clientId, v);
   return withTrainer(trainerId, async (tx) => {
     const [row] = await tx<{ id: string }[]>`
       insert into public.metrics (trainer_id, client_id, name, unit, direction)
@@ -33,13 +29,11 @@ export async function createMetric(trainerId: string, clientId: string, v: { nam
 }
 
 export async function deleteMetric(trainerId: string, metricId: string): Promise<boolean> {
-  if (isDemo()) return demo.deleteMetric(metricId);
   return withTrainer(trainerId, async (tx) => (await tx`delete from public.metrics where id = ${metricId} returning id`).length > 0);
 }
 
 /** One reading per metric per date; saving the same date again corrects it. */
 export async function upsertMetricEntry(trainerId: string, metricId: string, v: { entryDate: string; value: number; note?: string }): Promise<boolean> {
-  if (isDemo()) return demo.upsertMetricEntry(metricId, v);
   return withTrainer(trainerId, async (tx) => {
     const [m] = await tx`select id from public.metrics where id = ${metricId}`;
     if (!m) return false;
@@ -52,6 +46,5 @@ export async function upsertMetricEntry(trainerId: string, metricId: string, v: 
 }
 
 export async function deleteMetricEntry(trainerId: string, entryId: string): Promise<boolean> {
-  if (isDemo()) return demo.deleteMetricEntry(entryId);
   return withTrainer(trainerId, async (tx) => (await tx`delete from public.metric_entries where id = ${entryId} returning id`).length > 0);
 }

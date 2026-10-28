@@ -1,7 +1,7 @@
 /**
  * TEST-ONLY stand-in for the small slice of Supabase Auth (GoTrue) that this app
- * calls: password sign-in, sign-out, session refresh, user lookup, password
- * recovery (token-hash flow) and password update. It lets the end-to-end suite run
+ * calls: sign-up (with or without email confirmation), password sign-in, sign-out,
+ * session refresh, user lookup, email links (token-hash flow) and password update. It lets the end-to-end suite run
  * without Docker or a hosted Supabase project. It is NOT a security component and is
  * never used outside tests; production uses real Supabase Auth.
  *
@@ -16,8 +16,9 @@ const SECRET = process.env.FAKE_AUTH_JWT_SECRET ?? "test-only-secret-test-only-s
 const sql = postgres(process.env.FAKE_AUTH_DB, { onnotice: () => {} });
 
 const refreshTokens = new Map(); // token -> userId
-const recoveryTokens = new Map(); // token_hash -> userId
-const outbox = []; // [{ email, token_hash }]
+const emailTokens = new Map(); // token_hash -> { userId, type }
+const outbox = []; // [{ email, token_hash, type }]
+const config = { confirmSignups: false };
 
 const b64 = (o) => Buffer.from(typeof o === "string" ? o : JSON.stringify(o)).toString("base64url");
 function sign(payload) {
@@ -91,8 +92,25 @@ createServer(async (req, res) => {
       return send(200, { id: u.id });
     }
     if (url.pathname === "/__test/outbox") return send(200, outbox);
+    if (url.pathname === "/__test/config" && req.method === "POST") {
+      Object.assign(config, await body(req));
+      return send(200, config);
+    }
 
     // ---- auth API ---------------------------------------------------------
+    if (url.pathname === "/auth/v1/signup" && req.method === "POST") {
+      const { email, password, data = {} } = await body(req);
+      const address = String(email).toLowerCase();
+      const [existing] = await sql`select id from auth.users where email = ${address}`;
+      if (existing) return send(422, { code: 422, error_code: "user_already_exists", msg: "User already registered" });
+      const [u] = await sql`insert into auth.users (email, encrypted_password, raw_user_meta_data, email_confirmed_at)
+        values (${address}, ${hash(String(password))}, ${sql.json(data)}, ${config.confirmSignups ? null : new Date()}) returning *`;
+      if (!config.confirmSignups) return send(200, session(u));
+      const token_hash = randomBytes(16).toString("hex");
+      emailTokens.set(token_hash, { userId: u.id, type: "signup" });
+      outbox.push({ email: address, token_hash, type: "signup" });
+      return send(200, userJson(u));
+    }
     if (url.pathname === "/auth/v1/token" && req.method === "POST") {
       const grant = url.searchParams.get("grant_type");
       const data = await body(req);
@@ -101,6 +119,7 @@ createServer(async (req, res) => {
         if (!u || !u.encrypted_password || !check(String(data.password), u.encrypted_password)) {
           return send(400, { code: 400, error_code: "invalid_credentials", msg: "Invalid login credentials" });
         }
+        if (!u.email_confirmed_at) return send(400, { code: 400, error_code: "email_not_confirmed", msg: "Email not confirmed" });
         return send(200, session(u));
       }
       if (grant === "refresh_token") {
@@ -129,17 +148,19 @@ createServer(async (req, res) => {
       const [u] = await sql`select id from auth.users where email = ${String(email).toLowerCase()}`;
       if (u) {
         const token_hash = randomBytes(16).toString("hex");
-        recoveryTokens.set(token_hash, u.id);
-        outbox.push({ email, token_hash });
+        emailTokens.set(token_hash, { userId: u.id, type: "recovery" });
+        outbox.push({ email, token_hash, type: "recovery" });
       }
       return send(200, {});
     }
     if (url.pathname === "/auth/v1/verify" && req.method === "POST") {
-      const { token_hash } = await body(req);
-      const userId = recoveryTokens.get(token_hash);
-      if (!userId) return send(403, { code: 403, error_code: "otp_expired", msg: "Email link is invalid or has expired" });
-      recoveryTokens.delete(token_hash);
-      const [u] = await sql`select * from auth.users where id = ${userId}`;
+      const { token_hash, type } = await body(req);
+      const token = emailTokens.get(token_hash);
+      const matches = token && (token.type === type || (token.type === "signup" && type === "email"));
+      if (!matches) return send(403, { code: 403, error_code: "otp_expired", msg: "Email link is invalid or has expired" });
+      emailTokens.delete(token_hash);
+      const [u] = await sql`update auth.users set email_confirmed_at = coalesce(email_confirmed_at, now())
+        where id = ${token.userId} returning *`;
       return send(200, session(u));
     }
     send(404, { msg: "not found" });

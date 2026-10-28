@@ -1,6 +1,4 @@
 import "server-only";
-import { isDemo } from "@/lib/demo/mode";
-import * as demo from "@/lib/demo/store";
 import { withTrainer } from "@/lib/db/client";
 import type { Goal, GoalKind, GoalStatus } from "@/lib/domain/types";
 import type { GoalInput } from "@/lib/validation/goal";
@@ -32,7 +30,6 @@ const map = (r: Row): Goal => ({
 });
 
 export async function listGoals(trainerId: string, clientId: string): Promise<Goal[]> {
-  if (isDemo()) return demo.listGoals(clientId);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx<Row[]>`
       select g.id, g.client_id, g.kind, g.title, g.exercise_id, x.name as exercise_name,
@@ -52,7 +49,6 @@ async function exerciseId(tx: Parameters<Parameters<typeof withTrainer>[1]>[0], 
 }
 
 export async function createGoal(trainerId: string, clientId: string, input: GoalInput): Promise<string> {
-  if (isDemo()) return demo.createGoal(clientId, input);
   return withTrainer(trainerId, async (tx) => {
     const exId = input.kind === "lift" ? await exerciseId(tx, trainerId, input.exerciseName!) : null;
     const [row] = await tx<{ id: string }[]>`
@@ -65,7 +61,6 @@ export async function createGoal(trainerId: string, clientId: string, input: Goa
 }
 
 export async function updateGoal(trainerId: string, goalId: string, input: GoalInput): Promise<boolean> {
-  if (isDemo()) return demo.updateGoal(goalId, input);
   return withTrainer(trainerId, async (tx) => {
     const exId = input.kind === "lift" ? await exerciseId(tx, trainerId, input.exerciseName!) : null;
     const rows = await tx`
@@ -77,7 +72,6 @@ export async function updateGoal(trainerId: string, goalId: string, input: GoalI
 }
 
 export async function setGoalStatus(trainerId: string, goalId: string, status: GoalStatus, today: string): Promise<boolean> {
-  if (isDemo()) return demo.setGoalStatus(goalId, status, today);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`
       update public.goals set status = ${status}, achieved_on = ${status === "achieved" ? today : null}
@@ -87,7 +81,6 @@ export async function setGoalStatus(trainerId: string, goalId: string, status: G
 }
 
 export async function deleteGoal(trainerId: string, goalId: string): Promise<boolean> {
-  if (isDemo()) return demo.deleteGoal(goalId);
   return withTrainer(trainerId, async (tx) => {
     const rows = await tx`delete from public.goals where id = ${goalId} returning id`;
     return rows.length > 0;

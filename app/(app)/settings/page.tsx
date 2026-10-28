@@ -6,7 +6,6 @@ import { ProfileForm } from "@/components/settings/profile-form";
 import { NewPasswordForm } from "@/components/forms/new-password-form";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { requireTrainer } from "@/lib/auth";
-import { isDemo } from "@/lib/demo/mode";
 import { signOutAction } from "@/app/(auth)/actions";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -35,11 +34,9 @@ export default async function SettingsPage() {
         <Section title="Appearance" description="Saved on this device. “System” follows your device setting.">
           <ThemeToggle />
         </Section>
-        {!isDemo() && (
-          <Section title="Password" description="Use at least 10 characters.">
-            <NewPasswordForm doneHref="/settings" doneLabel="Done" />
-          </Section>
-        )}
+        <Section title="Password" description="Use at least 10 characters.">
+          <NewPasswordForm doneHref="/settings" doneLabel="Done" />
+        </Section>
         <Section title="Your data" description="Download a complete copy of every client, session, goal, measurement and note as JSON. Per-client CSV export is in each client's ⋯ menu.">
           <Button asChild variant="secondary">
             <a href="/settings/export" download>
@@ -47,15 +44,13 @@ export default async function SettingsPage() {
             </a>
           </Button>
         </Section>
-        {!isDemo() && (
-          <Section title="Session">
-            <form action={signOutAction}>
-              <Button type="submit" variant="secondary">
-                Sign out
-              </Button>
-            </form>
-          </Section>
-        )}
+        <Section title="Session">
+          <form action={signOutAction}>
+            <Button type="submit" variant="secondary">
+              Sign out
+            </Button>
+          </form>
+        </Section>
       </div>
     </div>
   );

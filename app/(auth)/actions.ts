@@ -2,9 +2,8 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { isDemo } from "@/lib/demo/mode";
 import { createClient } from "@/lib/supabase/server";
-import { emailSchema, newPasswordSchema, safeNext, signInSchema } from "@/lib/validation/auth";
+import { emailSchema, newPasswordSchema, safeNext, signInSchema, signUpSchema } from "@/lib/validation/auth";
 
 export type AuthFormState = {
   email?: string;
@@ -44,8 +43,55 @@ export async function signInAction(_prev: AuthFormState, formData: FormData): Pr
   redirect(safeNext(String(formData.get("next") ?? "")));
 }
 
+function validTimezone(tz: string) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return Boolean(tz);
+  } catch {
+    return false;
+  }
+}
+
+export async function signUpAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const parsed = signUpSchema.safeParse({
+    displayName: String(formData.get("displayName") ?? ""),
+    email,
+    password: String(formData.get("password") ?? ""),
+    confirm: String(formData.get("confirm") ?? ""),
+    timezone: String(formData.get("timezone") ?? ""),
+  });
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error.issues), email };
+
+  const { displayName, password, timezone } = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email: parsed.data.email,
+    password,
+    options: {
+      data: { display_name: displayName, ...(validTimezone(timezone) ? { timezone } : {}) },
+      emailRedirectTo: `${await siteUrl()}/auth/confirm?next=/`,
+    },
+  });
+  if (error) {
+    const message =
+      error.status === 429
+        ? "Too many attempts. Please wait a few minutes and try again."
+        : error.code === "user_already_exists" || error.code === "email_exists"
+          ? "An account with that email already exists. Sign in instead."
+          : error.code === "signup_disabled"
+            ? "New accounts can't be created right now."
+            : error.code === "weak_password"
+              ? "Choose a stronger password."
+              : "We couldn't create your account. Please try again.";
+    return { email, error: message };
+  }
+  // With email confirmation on, Supabase returns no session until the link is clicked.
+  if (data.session) redirect("/");
+  return { email, notice: "Check your email for a link to confirm your account, then sign in." };
+}
+
 export async function signOutAction() {
-  if (isDemo()) redirect("/");
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");

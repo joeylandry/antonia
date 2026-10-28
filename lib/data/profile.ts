@@ -1,16 +1,12 @@
 import "server-only";
-import { isDemo } from "@/lib/demo/mode";
-import * as demo from "@/lib/demo/store";
 import { withTrainer } from "@/lib/db/client";
 
 export async function updateProfile(trainerId: string, v: { displayName: string; timezone: string }) {
-  if (isDemo()) return demo.updateProfile(v);
   await withTrainer(trainerId, (tx) => tx`update public.trainers set display_name = ${v.displayName}, timezone = ${v.timezone} where id = ${trainerId}`);
 }
 
 /** Everything the trainer owns, for a full-fidelity backup. Row Level Security limits this to their own rows. */
 export async function exportAll(trainerId: string) {
-  if (isDemo()) return demo.exportAll();
   return withTrainer(trainerId, async (tx) => {
     const [clients, exercises, sessions, entries, goals, metrics, metricEntries, notes] = await Promise.all([
       tx`select * from public.clients order by full_name`,
