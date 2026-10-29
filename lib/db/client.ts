@@ -1,49 +1,64 @@
 import "server-only";
-import postgres from "postgres";
-import { env } from "@/lib/env";
+import { mkdirSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { SCHEMA } from "./schema";
 
-type Sql = postgres.Sql;
-export type Tx = postgres.TransactionSql;
+export type Db = DatabaseSync;
 
-const globalForDb = globalThis as unknown as { __antoniaSql?: Sql };
+const globalForDb = globalThis as unknown as { __antoniaDb?: Db };
 
-function connect(): Sql {
-  return postgres(env.databaseUrl, {
-    // Supabase's transaction pooler does not support prepared statements.
-    prepare: false,
-    max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
-    onnotice: () => {},
-    types: {
-      // Keep calendar dates as 'YYYY-MM-DD' strings so no timezone shifting can occur.
-      date: { to: 1082, from: [1082], serialize: (v: unknown) => String(v), parse: (v: string) => v },
-      numeric: { to: 1700, from: [1700], serialize: (v: unknown) => String(v), parse: (v: string) => Number(v) },
-    },
-  });
+/** Folder holding the data file. Must be on a disk that survives restarts and redeploys. */
+export function dataDir(): string {
+  return resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR || join(process.cwd(), "data"));
+}
+
+export function openDb(file: string): Db {
+  const db = new DatabaseSync(file);
+  db.exec("pragma journal_mode = wal; pragma foreign_keys = on; pragma busy_timeout = 5000;");
+  db.exec(SCHEMA);
+  return db;
 }
 
 /**
- * Created on first use, not at import time: `next build` imports every route to
- * collect page data, and the build must not need DATABASE_URL (or a database).
+ * Opened on first use, not at import time: `next build` imports every route to
+ * collect page data, and the build must not create a data file.
  */
-function getSql(): Sql {
-  if (globalForDb.__antoniaSql) return globalForDb.__antoniaSql;
-  const client = connect();
-  // Reused across requests (and across dev hot reloads) so connections aren't leaked.
-  globalForDb.__antoniaSql = client;
-  return client;
+export function getDb(): Db {
+  if (globalForDb.__antoniaDb) return globalForDb.__antoniaDb;
+  if (process.env.VERCEL) {
+    // Vercel's filesystem is wiped between invocations: every client record would be lost.
+    throw new Error("The built-in data file needs a persistent disk; Vercel has none. See README → Deploy.");
+  }
+  const dir = dataDir();
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const db = openDb(join(dir, "antonia.db"));
+  // Reused across requests (and across dev hot reloads).
+  globalForDb.__antoniaDb = db;
+  return db;
+}
+
+/** Test hook: use an already-open database (e.g. ':memory:') instead of the data file. */
+export function setDbForTests(db: Db | undefined) {
+  globalForDb.__antoniaDb = db;
 }
 
 /**
- * Runs `fn` in a transaction acting as `trainerId` under Row Level Security.
- * The `authenticated` role cannot bypass RLS, so even a bug in a query cannot
- * read or write another trainer's rows.
+ * Runs `fn` in a transaction. node:sqlite is synchronous, so nothing else can
+ * run between BEGIN and COMMIT on this connection.
  */
-export async function withTrainer<T>(trainerId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
-  return getSql().begin(async (tx) => {
-    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: trainerId, role: "authenticated" })}, true)`;
-    await tx`select set_config('role', 'authenticated', true)`;
-    return fn(tx);
-  }) as Promise<T>;
+export function tx<T>(fn: (db: Db) => T): T {
+  const db = getDb();
+  db.exec("begin immediate");
+  try {
+    const out = fn(db);
+    db.exec("commit");
+    return out;
+  } catch (e) {
+    db.exec("rollback");
+    throw e;
+  }
 }
+
+export const newId = () => crypto.randomUUID();
+export const nowIso = () => new Date().toISOString();

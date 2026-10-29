@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addClient, createTrainer, logSession, signIn } from "./support/helpers";
+import { addClient, logSession, signIn } from "./support/helpers";
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -9,8 +9,7 @@ function daysAgo(n: number) {
 
 test.describe("sessions, goals and progress", () => {
   test("log, correct and reuse sessions; progress and goals reflect the history", async ({ page }) => {
-    const { email } = await createTrainer("progress-main");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Pat Progress", "Squat 180");
 
     // Three sessions over time.
@@ -75,14 +74,13 @@ test.describe("sessions, goals and progress", () => {
 
     // Persistence across a fresh sign-in.
     await page.context().clearCookies();
-    await signIn(page, email);
+    await signIn(page);
     await page.goto(`/clients/${id}/sessions`);
     await expect(page.getByText("8 → 5 @ 105 → 135 lb")).toBeVisible();
   });
 
   test("session form validation and deletion", async ({ page }) => {
-    const { email } = await createTrainer("progress-validate");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Val Idate");
     await page.goto(`/clients/${id}/sessions/new`);
     await page.getByRole("button", { name: "Save session" }).click();
@@ -107,8 +105,7 @@ test.describe("sessions, goals and progress", () => {
   });
 
   test("measurements: track, add readings, correct a day, and see the change", async ({ page }) => {
-    const { email } = await createTrainer("progress-metric");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Meta Metric");
     await page.goto(`/clients/${id}/progress`);
     await page.getByRole("button", { name: "Track a measurement" }).click();

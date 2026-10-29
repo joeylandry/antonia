@@ -8,8 +8,8 @@ Always create Git branches with clear, descriptive names directly relevant to th
 
 - Stack and architecture: see README.md. Product reasoning and assumptions: docs/discovery.md.
 - This is Next.js 16: `middleware.ts` is now `proxy.ts`; read `node_modules/next/dist/docs/` before using unfamiliar APIs.
-- All client data access goes through `withTrainer()` (lib/db/client.ts). Never query client tables with a bypass role. New tables need `trainer_id`, a composite FK to its parent, RLS enabled and an `_own` policy.
+- All data lives in one SQLite file (`node:sqlite`, lib/db/client.ts; schema in lib/db/schema.ts, applied with `if not exists` on start). Schema changes must be additive and safe to re-run against an existing file.
 - Calendar dates are `YYYY-MM-DD` strings; never convert them through `Date` in a local zone. Use lib/dates.ts and the trainer's time zone for "today".
-- Server actions and route handlers must call `requireTrainer()` / `getTrainer()` first and validate input with the Zod schemas in lib/validation.
+- Access is a single passcode (lib/auth.ts). Server actions, pages and route handlers must call `requireTrainer()` / `getTrainer()` first and validate input with the Zod schemas in lib/validation.
 - Checks before pushing: `npm run typecheck && npm run lint && npm test`, and `npm run test:e2e` for UI/auth changes.
-- There is no demo or sample data: the app always runs against Supabase + Postgres. Trainers register at `/signup` (Supabase Auth); the `on_auth_user_created` trigger creates their `trainers` row.
+- No external services: no database server, no auth provider. `PASSCODE_HASH` (from `npm run passcode`) and optional `DATA_DIR` are the only configuration. There is no demo or sample data.

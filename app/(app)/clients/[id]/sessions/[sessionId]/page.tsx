@@ -13,9 +13,9 @@ export const metadata: Metadata = { title: "Edit session" };
 export default async function EditSessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const { id, sessionId } = await params;
   const trainer = await requireTrainer();
-  const [client, session] = await Promise.all([getClient(trainer.id, id), getSession(trainer.id, sessionId)]);
+  const [client, session] = await Promise.all([getClient(id), getSession(sessionId)]);
   if (!client || !session || session.clientId !== id) notFound();
-  const data = await loadEditorData(trainer.id, id, session.sessionDate);
+  const data = await loadEditorData(id, session.sessionDate);
 
   return (
     <div className="mx-auto max-w-3xl">

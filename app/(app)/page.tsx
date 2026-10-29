@@ -30,10 +30,10 @@ export default async function TodayPage() {
   const today = todayIn(trainer.timezone);
   const year = Number(today.slice(0, 4));
   const [clients, recent, goalsDue, weekCount] = await Promise.all([
-    listClients(trainer.id),
-    recentSessions(trainer.id),
-    goalsDueSoon(trainer.id, today),
-    sessionsThisWeek(trainer.id, today),
+    listClients(),
+    recentSessions(),
+    goalsDueSoon(today),
+    sessionsThisWeek(today),
   ]);
 
   const first = trainer.displayName.split(" ")[0];

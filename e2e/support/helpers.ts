@@ -1,24 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
-const AUTH = () => process.env.E2E_AUTH_URL!;
-export const PASSWORD = "correct horse battery";
+export const PASSCODE = "correct horse battery staple";
 
-/** Creates (or recreates) a trainer account and returns its credentials. */
-export async function createTrainer(label: string, displayName = "Antonia Test") {
-  const email = `${label}@example.test`;
-  const res = await fetch(`${AUTH()}/__test/users`, {
-    method: "POST",
-    body: JSON.stringify({ email, password: PASSWORD, displayName }),
-  });
-  expect(res.ok).toBeTruthy();
-  return { email, password: PASSWORD };
-}
-
-export async function signIn(page: Page, email: string, password = PASSWORD) {
+export async function signIn(page: Page, passcode = PASSCODE) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByLabel("Passcode").fill(passcode);
+  await page.getByRole("button", { name: "Unlock" }).click();
   await page.waitForURL("**/");
   await expect(page.getByRole("navigation", { name: "Primary" }).first()).toBeVisible();
 }
@@ -30,10 +17,6 @@ export async function addClient(page: Page, name: string, goal?: string) {
   await page.getByRole("button", { name: "Add client" }).click();
   await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
   return page.url().split("/").pop()!;
-}
-
-export async function outbox(): Promise<{ email: string; token_hash: string; type: string }[]> {
-  return (await fetch(`${AUTH()}/__test/outbox`)).json();
 }
 
 /** Logs a session through the UI. */
@@ -59,8 +42,3 @@ export async function logSession(
   await page.waitForURL(`**/clients/${clientId}/sessions`);
 }
 
-/** Switches the test auth server between instant sign-up and email-confirmed sign-up. */
-export async function setConfirmSignups(confirmSignups: boolean) {
-  const res = await fetch(`${AUTH()}/__test/config`, { method: "POST", body: JSON.stringify({ confirmSignups }) });
-  expect(res.ok).toBeTruthy();
-}

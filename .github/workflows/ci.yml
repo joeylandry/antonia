@@ -13,20 +13,6 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      E2E_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
-      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/antonia_ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,13 +23,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
 
-      - name: Database tests
-        run: |
-          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c "create database antonia_ci"
-          for f in db/dev/supabase-shim.sql db/migrations/*.sql; do
-            PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d antonia_ci -v ON_ERROR_STOP=1 -q -f "$f"
-          done
-          npm test
+      - run: npm test
 
       - name: End-to-end tests
         run: |

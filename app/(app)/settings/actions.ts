@@ -19,11 +19,11 @@ const profileSchema = z.object({
 });
 
 export async function updateProfileAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = profileSchema.safeParse({ displayName: formData.get("displayName") ?? "", timezone: formData.get("timezone") ?? "" });
   if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error.issues) };
   try {
-    await updateProfile(trainer.id, parsed.data);
+    await updateProfile(parsed.data);
   } catch {
     return { error: "We couldn't save your settings. Please try again." };
   }

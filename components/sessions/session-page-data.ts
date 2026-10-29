@@ -3,11 +3,11 @@ import { listExercises, listSessions, lastPerformances } from "@/lib/data/sessio
 import type { WorkoutSession } from "@/lib/domain/types";
 
 /** Everything the session editor needs besides the session itself. */
-export async function loadEditorData(trainerId: string, clientId: string, before?: string) {
+export async function loadEditorData(clientId: string, before?: string) {
   const [exercises, sessions, last] = await Promise.all([
-    listExercises(trainerId),
-    listSessions(trainerId, clientId),
-    lastPerformances(trainerId, clientId, before),
+    listExercises(),
+    listSessions(clientId),
+    lastPerformances(clientId, before),
   ]);
   const focusCounts = new Map<string, number>();
   for (const s of sessions) if (s.focus) focusCounts.set(s.focus, (focusCounts.get(s.focus) ?? 0) + 1);

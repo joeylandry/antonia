@@ -1,13 +1,5 @@
 import type { NextConfig } from "next";
 
-const supabaseOrigin = (() => {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
-  } catch {
-    return "";
-  }
-})();
-
 // Next.js and next-themes both need inline scripts, so script-src keeps
 // 'unsafe-inline'. The rest of the policy still blocks framing, plugins,
 // base-tag injection, cross-origin form posts and stray network destinations.
@@ -17,7 +9,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  `connect-src 'self' ${supabaseOrigin}`.trim(),
+  "connect-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

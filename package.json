@@ -9,20 +9,17 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "tsx scripts/migrate.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "passcode": "tsx scripts/passcode.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.118.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.61.0",
     "next": "16.4.3",
     "next-themes": "^0.4.6",
-    "postgres": "^3.4.9",
     "radix-ui": "^1.8.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",

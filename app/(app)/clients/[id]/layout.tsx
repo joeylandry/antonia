@@ -18,11 +18,11 @@ import { listSessions } from "@/lib/data/sessions";
 export default async function ClientLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
   const trainer = await requireTrainer();
-  const client = await getClient(trainer.id, id);
+  const client = await getClient(id);
   if (!client) notFound();
   const today = todayIn(trainer.timezone);
   const archived = client.archivedAt != null;
-  const lastSessionDate = (await listSessions(trainer.id, id))[0]?.sessionDate ?? null;
+  const lastSessionDate = (await listSessions(id))[0]?.sessionDate ?? null;
   const health = clientHealth({ ...client, lastSessionDate }, today);
 
   return (

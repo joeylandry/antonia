@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createTrainer, signIn } from "./support/helpers";
+import { signIn } from "./support/helpers";
 
 test.describe("theme", () => {
   test("follows the system by default and remembers an explicit choice", async ({ browser }) => {
@@ -12,8 +12,7 @@ test.describe("theme", () => {
     await expect(page.locator("html")).not.toHaveClass(/dark/);
     await page.reload();
     await expect(page.locator("html")).not.toHaveClass(/dark/);
-    const { email } = await createTrainer("theme-user");
-    await signIn(page, email);
+    await signIn(page);
     await expect(page.locator("html")).not.toHaveClass(/dark/);
     await ctx.close();
   });

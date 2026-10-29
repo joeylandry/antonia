@@ -1,7 +1,8 @@
 import "server-only";
-import { withTrainer } from "@/lib/db/client";
+import { getDb, newId, nowIso, tx } from "@/lib/db/client";
 import type { Goal, GoalKind, GoalStatus } from "@/lib/domain/types";
 import type { GoalInput } from "@/lib/validation/goal";
+import { ensureExercise } from "@/lib/data/sessions";
 
 type Row = {
   id: string;
@@ -29,60 +30,49 @@ const map = (r: Row): Goal => ({
   achievedOn: r.achieved_on,
 });
 
-export async function listGoals(trainerId: string, clientId: string): Promise<Goal[]> {
-  return withTrainer(trainerId, async (tx) => {
-    const rows = await tx<Row[]>`
-      select g.id, g.client_id, g.kind, g.title, g.exercise_id, x.name as exercise_name,
-             g.target_value, g.target_date, g.status, g.achieved_on
-      from public.goals g left join public.exercises x on x.id = g.exercise_id
-      where g.client_id = ${clientId}
-      order by (g.status = 'active') desc, g.target_date nulls last, g.created_at`;
-    return rows.map(map);
+export async function listGoals(clientId: string): Promise<Goal[]> {
+  const rows = getDb()
+    .prepare(
+      `select g.id, g.client_id, g.kind, g.title, g.exercise_id, x.name as exercise_name,
+              g.target_value, g.target_date, g.status, g.achieved_on
+       from goals g left join exercises x on x.id = g.exercise_id
+       where g.client_id = ?
+       order by (g.status = 'active') desc, g.target_date is null, g.target_date, g.created_at`,
+    )
+    .all(clientId) as Row[];
+  return rows.map(map);
+}
+
+export async function createGoal(clientId: string, input: GoalInput): Promise<string> {
+  return tx((db) => {
+    const exId = input.kind === "lift" ? ensureExercise(db, input.exerciseName!) : null;
+    const id = newId();
+    const now = nowIso();
+    db.prepare(
+      `insert into goals (id, client_id, kind, title, exercise_id, target_value, target_date, created_at, updated_at)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, clientId, input.kind, input.title, exId, input.kind === "lift" ? (input.targetValue ?? null) : null, input.targetDate ?? null, now, now);
+    return id;
   });
 }
 
-async function exerciseId(tx: Parameters<Parameters<typeof withTrainer>[1]>[0], trainerId: string, name: string) {
-  const [row] = await tx<{ id: string }[]>`
-    insert into public.exercises (trainer_id, name) values (${trainerId}, ${name.trim()})
-    on conflict (trainer_id, name_key) do update set name = public.exercises.name returning id`;
-  return row.id;
-}
-
-export async function createGoal(trainerId: string, clientId: string, input: GoalInput): Promise<string> {
-  return withTrainer(trainerId, async (tx) => {
-    const exId = input.kind === "lift" ? await exerciseId(tx, trainerId, input.exerciseName!) : null;
-    const [row] = await tx<{ id: string }[]>`
-      insert into public.goals (trainer_id, client_id, kind, title, exercise_id, target_value, target_date)
-      values (${trainerId}, ${clientId}, ${input.kind}, ${input.title}, ${exId},
-              ${input.kind === "lift" ? (input.targetValue ?? null) : null}, ${input.targetDate ?? null})
-      returning id`;
-    return row.id;
+export async function updateGoal(goalId: string, input: GoalInput): Promise<boolean> {
+  return tx((db) => {
+    const exId = input.kind === "lift" ? ensureExercise(db, input.exerciseName!) : null;
+    const { changes } = db
+      .prepare("update goals set kind = ?, title = ?, exercise_id = ?, target_value = ?, target_date = ?, updated_at = ? where id = ?")
+      .run(input.kind, input.title, exId, input.kind === "lift" ? (input.targetValue ?? null) : null, input.targetDate ?? null, nowIso(), goalId);
+    return changes > 0;
   });
 }
 
-export async function updateGoal(trainerId: string, goalId: string, input: GoalInput): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
-    const exId = input.kind === "lift" ? await exerciseId(tx, trainerId, input.exerciseName!) : null;
-    const rows = await tx`
-      update public.goals set kind = ${input.kind}, title = ${input.title}, exercise_id = ${exId},
-        target_value = ${input.kind === "lift" ? (input.targetValue ?? null) : null}, target_date = ${input.targetDate ?? null}
-      where id = ${goalId} returning id`;
-    return rows.length > 0;
-  });
+export async function setGoalStatus(goalId: string, status: GoalStatus, today: string): Promise<boolean> {
+  const { changes } = getDb()
+    .prepare("update goals set status = ?, achieved_on = ?, updated_at = ? where id = ?")
+    .run(status, status === "achieved" ? today : null, nowIso(), goalId);
+  return changes > 0;
 }
 
-export async function setGoalStatus(trainerId: string, goalId: string, status: GoalStatus, today: string): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
-    const rows = await tx`
-      update public.goals set status = ${status}, achieved_on = ${status === "achieved" ? today : null}
-      where id = ${goalId} returning id`;
-    return rows.length > 0;
-  });
-}
-
-export async function deleteGoal(trainerId: string, goalId: string): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
-    const rows = await tx`delete from public.goals where id = ${goalId} returning id`;
-    return rows.length > 0;
-  });
+export async function deleteGoal(goalId: string): Promise<boolean> {
+  return getDb().prepare("delete from goals where id = ?").run(goalId).changes > 0;
 }

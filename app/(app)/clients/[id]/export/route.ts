@@ -9,9 +9,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const trainer = await getTrainer();
   if (!trainer) return new NextResponse("Unauthorized", { status: 401 });
   const { id } = await params;
-  const client = await getClient(trainer.id, id);
+  const client = await getClient(id);
   if (!client) return new NextResponse("Not found", { status: 404 });
-  const sessions = (await listSessions(trainer.id, id)).reverse();
+  const sessions = (await listSessions(id)).reverse();
 
   const lines = [csvRow(["Session date", "Workout / focus", "Exercise", "Set", "Reps", "Weight (lb)", "Seconds", "Notes / progress"])];
   for (const s of sessions) {

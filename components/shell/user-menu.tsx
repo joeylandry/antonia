@@ -9,15 +9,14 @@ import { signOutAction } from "@/app/(auth)/actions";
 import type { Trainer } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-function initials(name: string, email: string) {
-  const source = name.trim() || email;
-  const parts = source.split(/[\s@.]+/).filter(Boolean);
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "?") + (parts.length > 1 ? parts[1][0] : "")).toUpperCase();
 }
 
 export function UserMenu({ trainer, compact }: { trainer: Trainer; compact?: boolean }) {
   const [, startTransition] = useTransition();
-  const label = trainer.displayName || trainer.email;
+  const label = trainer.displayName || "Signed in";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -28,20 +27,17 @@ export function UserMenu({ trainer, compact }: { trainer: Trainer; compact?: boo
         aria-label="Account menu"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-soft-foreground">
-          {initials(trainer.displayName, trainer.email)}
+          {initials(trainer.displayName)}
         </span>
         {!compact && (
           <>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{label}</span>
-              {trainer.displayName && <span className="block truncate text-xs text-muted-foreground">{trainer.email}</span>}
-            </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
             <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           </>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={compact ? "end" : "start"} side={compact ? "bottom" : "top"} className="w-60">
-        <DropdownMenuLabel>{trainer.email}</DropdownMenuLabel>
+        <DropdownMenuLabel>{label}</DropdownMenuLabel>
         <div className="flex items-center justify-between px-2.5 py-1.5">
           <span className="text-sm">Theme</span>
           <ThemeToggle />

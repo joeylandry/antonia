@@ -26,14 +26,14 @@ function refresh(clientId: string) {
 // ---- sessions -------------------------------------------------------------
 
 export async function saveSessionAction(sessionId: string | null, values: unknown): Promise<Result<{ id: string; clientId: string }>> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = sessionSchema.safeParse(values);
   if (!parsed.success) {
     return { ok: false, error: "Please fix the highlighted fields.", fieldErrors: fieldErrorsFrom(parsed.error.issues) };
   }
   if (sessionId && !UUID.test(sessionId)) return { ok: false, error: "This session no longer exists." };
   try {
-    const id = await saveSession(trainer.id, parsed.data, sessionId ?? undefined);
+    const id = await saveSession(parsed.data, sessionId ?? undefined);
     if (!id) return { ok: false, error: "This session no longer exists." };
     refresh(parsed.data.clientId);
     return { ok: true, id, clientId: parsed.data.clientId };
@@ -45,10 +45,10 @@ export async function saveSessionAction(sessionId: string | null, values: unknow
 }
 
 export async function deleteSessionAction(clientId: string, sessionId: string): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   if (!UUID.test(sessionId)) return { ok: false, error: GENERIC };
   try {
-    if (!(await deleteSessionRecord(trainer.id, sessionId))) return { ok: false, error: "This session no longer exists." };
+    if (!(await deleteSessionRecord(sessionId))) return { ok: false, error: "This session no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }
@@ -59,14 +59,14 @@ export async function deleteSessionAction(clientId: string, sessionId: string): 
 // ---- goals ----------------------------------------------------------------
 
 export async function saveGoalAction(clientId: string, goalId: string | null, values: unknown): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = goalSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: "Please fix the highlighted fields.", fieldErrors: fieldErrorsFrom(parsed.error.issues) };
   try {
     if (goalId) {
-      if (!UUID.test(goalId) || !(await updateGoal(trainer.id, goalId, parsed.data))) return { ok: false, error: "This goal no longer exists." };
+      if (!UUID.test(goalId) || !(await updateGoal(goalId, parsed.data))) return { ok: false, error: "This goal no longer exists." };
     } else {
-      await createGoal(trainer.id, clientId, parsed.data);
+      await createGoal(clientId, parsed.data);
     }
   } catch {
     return { ok: false, error: GENERIC };
@@ -79,7 +79,7 @@ export async function setGoalStatusAction(clientId: string, goalId: string, stat
   const trainer = await requireTrainer();
   if (!UUID.test(goalId) || !["active", "achieved", "dropped"].includes(status)) return { ok: false, error: GENERIC };
   try {
-    if (!(await setGoalStatus(trainer.id, goalId, status, todayIn(trainer.timezone)))) return { ok: false, error: "This goal no longer exists." };
+    if (!(await setGoalStatus(goalId, status, todayIn(trainer.timezone)))) return { ok: false, error: "This goal no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }
@@ -88,10 +88,10 @@ export async function setGoalStatusAction(clientId: string, goalId: string, stat
 }
 
 export async function deleteGoalAction(clientId: string, goalId: string): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   if (!UUID.test(goalId)) return { ok: false, error: GENERIC };
   try {
-    if (!(await deleteGoal(trainer.id, goalId))) return { ok: false, error: "This goal no longer exists." };
+    if (!(await deleteGoal(goalId))) return { ok: false, error: "This goal no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }
@@ -102,11 +102,11 @@ export async function deleteGoalAction(clientId: string, goalId: string): Promis
 // ---- measurements ---------------------------------------------------------
 
 export async function createMetricAction(clientId: string, values: unknown): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = metricSchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: "Please fix the highlighted fields.", fieldErrors: fieldErrorsFrom(parsed.error.issues) };
   try {
-    await createMetric(trainer.id, clientId, parsed.data);
+    await createMetric(clientId, parsed.data);
   } catch (e) {
     const dup = e instanceof Error && /metrics_client_name_idx|duplicate/.test(e.message);
     return { ok: false, error: dup ? "You're already tracking a measurement with that name." : GENERIC };
@@ -116,10 +116,10 @@ export async function createMetricAction(clientId: string, values: unknown): Pro
 }
 
 export async function deleteMetricAction(clientId: string, metricId: string): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   if (!UUID.test(metricId)) return { ok: false, error: GENERIC };
   try {
-    if (!(await deleteMetric(trainer.id, metricId))) return { ok: false, error: "This measurement no longer exists." };
+    if (!(await deleteMetric(metricId))) return { ok: false, error: "This measurement no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }
@@ -128,12 +128,12 @@ export async function deleteMetricAction(clientId: string, metricId: string): Pr
 }
 
 export async function saveMetricEntryAction(clientId: string, metricId: string, values: unknown): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = metricEntrySchema.safeParse(values);
   if (!parsed.success) return { ok: false, error: "Please fix the highlighted fields.", fieldErrors: fieldErrorsFrom(parsed.error.issues) };
   if (!UUID.test(metricId)) return { ok: false, error: GENERIC };
   try {
-    if (!(await upsertMetricEntry(trainer.id, metricId, parsed.data))) return { ok: false, error: "This measurement no longer exists." };
+    if (!(await upsertMetricEntry(metricId, parsed.data))) return { ok: false, error: "This measurement no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }
@@ -142,10 +142,10 @@ export async function saveMetricEntryAction(clientId: string, metricId: string, 
 }
 
 export async function deleteMetricEntryAction(clientId: string, entryId: string): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   if (!UUID.test(entryId)) return { ok: false, error: GENERIC };
   try {
-    if (!(await deleteMetricEntry(trainer.id, entryId))) return { ok: false, error: "This reading no longer exists." };
+    if (!(await deleteMetricEntry(entryId))) return { ok: false, error: "This reading no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }
@@ -156,14 +156,14 @@ export async function deleteMetricEntryAction(clientId: string, entryId: string)
 // ---- notes ----------------------------------------------------------------
 
 export async function saveNoteAction(clientId: string, noteId: string | null, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = noteSchema.safeParse({ body: String(formData.get("body") ?? "") });
   if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error.issues) };
   try {
     if (noteId) {
-      if (!UUID.test(noteId) || !(await updateNote(trainer.id, noteId, parsed.data.body))) return { error: "This note no longer exists." };
+      if (!UUID.test(noteId) || !(await updateNote(noteId, parsed.data.body))) return { error: "This note no longer exists." };
     } else {
-      await createNote(trainer.id, clientId, parsed.data.body);
+      await createNote(clientId, parsed.data.body);
     }
   } catch {
     return { error: GENERIC };
@@ -173,10 +173,10 @@ export async function saveNoteAction(clientId: string, noteId: string | null, _p
 }
 
 export async function deleteNoteAction(clientId: string, noteId: string): Promise<Result> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   if (!UUID.test(noteId)) return { ok: false, error: GENERIC };
   try {
-    if (!(await deleteNote(trainer.id, noteId))) return { ok: false, error: "This note no longer exists." };
+    if (!(await deleteNote(noteId))) return { ok: false, error: "This note no longer exists." };
   } catch {
     return { ok: false, error: GENERIC };
   }

@@ -10,8 +10,8 @@ export const metadata: Metadata = { title: "Edit client" };
 
 export default async function EditClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const trainer = await requireTrainer();
-  const client = await getClient(trainer.id, id);
+  await requireTrainer();
+  const client = await getClient(id);
   if (!client) notFound();
   return (
     <div className="mx-auto max-w-2xl">

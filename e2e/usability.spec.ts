@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { addClient, createTrainer, signIn } from "./support/helpers";
+import { addClient, signIn } from "./support/helpers";
 
 test.describe("usability regressions", () => {
   test("Enter in a set field moves on instead of saving a half-built session; Ctrl+Enter saves", async ({ page }) => {
-    const { email } = await createTrainer("usab-enter");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Enter Key");
     await page.goto(`/clients/${id}/sessions/new`);
     await expect(page.getByLabel("Exercise 1", { exact: true })).toBeFocused();
@@ -21,8 +20,7 @@ test.describe("usability regressions", () => {
   });
 
   test("closing a dialog returns focus to the button that opened it", async ({ page }) => {
-    const { email } = await createTrainer("usab-focus");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Focus Return");
     await page.goto(`/clients/${id}/goals`);
     const opener = page.getByRole("button", { name: "Add goal", exact: true });
@@ -38,8 +36,7 @@ test.describe("usability regressions", () => {
   test("no horizontal scrolling on a phone-sized screen", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 800 } });
     const page = await ctx.newPage();
-    const { email } = await createTrainer("usab-mobile");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Quinn Abernathy-Whitfield-Montgomery", "A very long goal ".repeat(20));
     for (const path of ["/", "/clients", `/clients/${id}`, `/clients/${id}/sessions`, `/clients/${id}/progress`, `/clients/${id}/goals`, `/clients/${id}/sessions/new`, "/settings"]) {
       await page.goto(path);

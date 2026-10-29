@@ -1,51 +1,22 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/confirm"];
+const SESSION_COOKIES = ["__Host-antonia_session", "antonia_session"];
 
 /**
- * Keeps the Supabase session cookie fresh and bounces signed-out visitors to
- * /login. This is an optimistic check only; every page and server action
- * re-verifies the user and the database enforces ownership with RLS.
+ * Bounces visitors without a session cookie to /login. This is an optimistic
+ * check only; every page, route and server action re-verifies the session
+ * against the server-side store (lib/auth.ts).
  */
-export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-        },
-      },
-    },
-  );
-
-  const { data } = await supabase.auth.getClaims();
-  const signedIn = Boolean(data?.claims?.sub);
+export function proxy(request: NextRequest) {
+  const hasCookie = SESSION_COOKIES.some((name) => request.cookies.has(name));
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
-
-  if (!signedIn && !isPublic) {
+  if (!hasCookie && path !== "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
-    return redirect;
-  }
-  if (signedIn && (path === "/login" || path === "/signup")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
     return NextResponse.redirect(url);
   }
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

@@ -16,7 +16,7 @@ export default async function GoalsPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const trainer = await requireTrainer();
   const today = todayIn(trainer.timezone);
-  const [goals, history, exercises] = await Promise.all([listGoals(trainer.id, id), exerciseHistory(trainer.id, id), listExercises(trainer.id)]);
+  const [goals, history, exercises] = await Promise.all([listGoals(id), exerciseHistory(id), listExercises()]);
   const progress = progressByGoal(goals, history, today);
   const exerciseNames = exercises.map((e) => e.name);
   const active = goals.filter((g) => g.status === "active");
