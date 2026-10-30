@@ -65,7 +65,7 @@ test.describe("client management", () => {
     await page.getByLabel("Search clients").fill("zzzz");
     await expect(page.getByText("No clients match your search.")).toBeVisible();
     await page.getByLabel("Search clients").fill("");
-    // The data file is shared by the whole run, so other tests' clients may be on hold; these three are active.
+    // The database is shared by the whole run, so other tests' clients may be on hold; these three are active.
     await page.getByRole("button", { name: /^On hold/ }).click();
     await expect(rows.filter({ hasText: /Zed Zimmer|Amy Adams|Max Moore/ })).toHaveCount(0);
   });

@@ -35,7 +35,7 @@ export default async function SettingsPage() {
         </Section>
         <Section title="Passcode">
           <p className="text-sm text-muted-foreground">
-            The passcode is set on the server, not here. To change it, run <code className="font-mono text-foreground">npm run passcode</code>, put the
+            The passcode is set in the hosting settings, not here. To change it, run <code className="font-mono text-foreground">npm run passcode</code>, put the
             new <code className="font-mono text-foreground">PASSCODE_HASH</code> in place of the old one and restart the app. Every device is then signed out.
           </p>
         </Section>

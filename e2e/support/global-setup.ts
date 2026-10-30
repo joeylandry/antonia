@@ -1,15 +1,15 @@
-import { mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import postgres from "postgres";
 import { SCHEMA } from "../../lib/db/schema";
 
-/** Starts every run from an empty data file whose profile has a known name. */
+/** Starts every run from an empty database whose profile has a known name. */
 export default async function globalSetup() {
-  const dir = process.env.E2E_DATA_DIR!;
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
-  const db = new DatabaseSync(join(dir, "antonia.db"));
-  db.exec(SCHEMA);
-  db.prepare("update profile set display_name = ? where id = 1").run("Antonia Test");
-  db.close();
+  const admin = postgres(process.env.E2E_ADMIN_DATABASE_URL!, { onnotice: () => {} });
+  await admin.unsafe("drop database if exists antonia_e2e with (force)");
+  await admin.unsafe("create database antonia_e2e");
+  await admin.end();
+
+  const db = postgres(process.env.E2E_DATABASE_URL!, { onnotice: () => {} });
+  await db.unsafe(SCHEMA);
+  await db`update app.profile set display_name = 'Antonia Test' where id = 1`;
+  await db.end();
 }

@@ -1,5 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_DATABASE_URL, setupTestDatabase } from "./support/db";
 
 const jar = new Map<string, string>();
 let ip = "203.0.113.1";
@@ -13,36 +13,34 @@ vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-forwarded-for": `198.51.100.9, ${ip}` }),
 }));
 
-const { setDbForTests, openDb } = await import("@/lib/db/client");
 const { getTrainer, signIn, signOut, MAX_FAILURES_PER_IP, MAX_FAILURES_TOTAL } = await import("@/lib/auth");
 const { hashPasscode } = await import("@/lib/passcode");
 
 const PASSCODE = "correct horse battery staple";
 let hash: string;
-let db: DatabaseSync;
+
+const suite = describe.skipIf(!TEST_DATABASE_URL);
+const sql = TEST_DATABASE_URL ? setupTestDatabase() : () => { throw new Error("no TEST_DATABASE_URL"); };
 
 beforeAll(async () => {
   hash = await hashPasscode(PASSCODE);
 });
 beforeEach(() => {
-  db = openDb(":memory:");
-  setDbForTests(db);
   process.env.PASSCODE_HASH = hash;
   jar.clear();
   ip = "203.0.113.1";
 });
 afterEach(() => {
   vi.useRealTimers();
-  setDbForTests(undefined);
 });
 
 // getTrainer is wrapped in React's cache(), which is a no-op outside a request.
-describe("sign-in", () => {
+suite("sign-in", () => {
   it("issues a server-side session for the right passcode, and only stores its hash", async () => {
     expect(await signIn(PASSCODE)).toBe("ok");
     const token = [...jar.values()][0];
     expect(token).toMatch(/^[\w-]{43}$/);
-    const stored = db.prepare("select token_hash from auth_sessions").all() as { token_hash: string }[];
+    const stored = await sql()<{ token_hash: string }[]>`select token_hash from app.auth_sessions`;
     expect(stored).toHaveLength(1);
     expect(stored[0].token_hash).not.toContain(token);
     expect(await getTrainer()).not.toBeNull();
@@ -86,7 +84,7 @@ describe("sign-in", () => {
   });
 });
 
-describe("brute-force protection", () => {
+suite("brute-force protection", () => {
   it(`locks an address after ${MAX_FAILURES_PER_IP} wrong guesses, even for the right passcode`, async () => {
     for (let i = 0; i < MAX_FAILURES_PER_IP; i++) expect(await signIn(`guess ${i}`)).toBe("wrong");
     expect(await signIn(PASSCODE)).toBe("locked");
@@ -118,7 +116,7 @@ describe("brute-force protection", () => {
 
   it("the per-address limit uses the address the proxy saw, not a spoofed leftmost entry", async () => {
     for (let i = 0; i < MAX_FAILURES_PER_IP; i++) await signIn(`guess ${i}`);
-    const rows = db.prepare("select distinct ip from login_failures").all() as { ip: string }[];
-    expect(rows).toEqual([{ ip: "203.0.113.1" }]);
+    const rows = await sql()<{ ip: string }[]>`select distinct ip from app.login_failures`;
+    expect([...rows]).toEqual([{ ip: "203.0.113.1" }]);
   });
 });

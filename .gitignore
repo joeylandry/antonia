@@ -44,6 +44,3 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 
-# app data (the built-in database file)
-/data/
-/.e2e-data/

@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getDb } from "@/lib/db/client";
+import { withDb } from "@/lib/db/client";
 import { parseHash, verifyPasscode } from "@/lib/passcode";
 import { getProfile } from "@/lib/data/profile";
 
@@ -47,37 +47,38 @@ export type SignInResult = "ok" | "wrong" | "locked" | "not_configured";
 export async function signIn(passcode: string): Promise<SignInResult> {
   const hash = configuredHash();
   if (!hash) return "not_configured";
-  const db = getDb();
   const ip = await clientIp();
-  const now = Date.now();
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - LOGIN_WINDOW_MS);
 
-  db.prepare("delete from login_failures where at < ?").run(now - LOGIN_WINDOW_MS);
-  const counts = db
-    .prepare("select count(*) as total, sum(ip = ?) as mine from login_failures")
-    .get(ip) as { total: number; mine: number | null };
-  if (counts.total >= MAX_FAILURES_TOTAL || (counts.mine ?? 0) >= MAX_FAILURES_PER_IP) return "locked";
-
-  // Count the attempt before checking it, so parallel requests can't slip past the limit
-  // while scrypt runs; it is removed again only if the passcode is right.
-  const { lastInsertRowid } = db.prepare("insert into login_failures (ip, at) values (?, ?)").run(ip, now);
+  // Count the attempt before checking it, so parallel requests (even on other
+  // server instances) can't slip past the limit while scrypt runs. The advisory
+  // lock makes check-and-record one step; the row is removed only if the passcode is right.
+  const attemptId = await withDb(async (tx) => {
+    await tx`select pg_advisory_xact_lock(7366160502)`;
+    await tx`delete from app.login_failures where at < ${windowStart}`;
+    const [c] = await tx<{ total: number; mine: number }[]>`
+      select count(*)::int as total, count(*) filter (where ip = ${ip})::int as mine from app.login_failures`;
+    if (c.total >= MAX_FAILURES_TOTAL || c.mine >= MAX_FAILURES_PER_IP) return null;
+    const [row] = await tx<{ id: string }[]>`insert into app.login_failures (ip, at) values (${ip}, ${now}) returning id`;
+    return row.id;
+  });
+  if (attemptId == null) return "locked";
   if (!(await verifyPasscode(passcode, hash))) return "wrong";
-  db.prepare("delete from login_failures where rowid = ?").run(lastInsertRowid);
 
   const token = randomBytes(32).toString("base64url");
-  const expires = now + SESSION_DAYS * 86_400_000;
-  db.prepare("delete from auth_sessions where expires_at < ?").run(now);
-  db.prepare("insert into auth_sessions (token_hash, passcode_id, created_at, expires_at) values (?, ?, ?, ?)").run(
-    sha256(token),
-    passcodeId(hash),
-    now,
-    expires,
-  );
+  const expires = new Date(now.getTime() + SESSION_DAYS * 86_400_000);
+  await withDb(async (tx) => {
+    await tx`delete from app.login_failures where id = ${attemptId}`;
+    await tx`delete from app.auth_sessions where expires_at < ${now}`;
+    await tx`insert into app.auth_sessions (token_hash, passcode_id, expires_at) values (${sha256(token)}, ${passcodeId(hash)}, ${expires})`;
+  });
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires: new Date(expires),
+    expires,
   });
   return "ok";
 }
@@ -85,7 +86,7 @@ export async function signIn(passcode: string): Promise<SignInResult> {
 export async function signOut() {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
-  if (token) getDb().prepare("delete from auth_sessions where token_hash = ?").run(sha256(token));
+  if (token) await withDb((tx) => tx`delete from app.auth_sessions where token_hash = ${sha256(token)}`);
   store.delete(SESSION_COOKIE);
 }
 
@@ -94,10 +95,11 @@ async function hasValidSession(): Promise<boolean> {
   const hash = configuredHash();
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!hash || !token || token.length > 100) return false;
-  const row = getDb()
-    .prepare("select passcode_id, expires_at from auth_sessions where token_hash = ?")
-    .get(sha256(token)) as { passcode_id: string; expires_at: number } | undefined;
-  return Boolean(row && row.expires_at > Date.now() && row.passcode_id === passcodeId(hash));
+  const [row] = await withDb(
+    (tx) => tx<{ passcode_id: string; expires_at: Date }[]>`
+      select passcode_id, expires_at from app.auth_sessions where token_hash = ${sha256(token)}`,
+  );
+  return Boolean(row && row.expires_at.getTime() > Date.now() && row.passcode_id === passcodeId(hash));
 }
 
 /** The signed-in owner's profile, or null. Checked against the server-side session store. */

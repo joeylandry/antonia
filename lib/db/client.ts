@@ -1,64 +1,68 @@
 import "server-only";
-import { mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import postgres from "postgres";
 import { SCHEMA } from "./schema";
 
-export type Db = DatabaseSync;
+type Sql = postgres.Sql;
+export type Tx = postgres.TransactionSql;
 
-const globalForDb = globalThis as unknown as { __antoniaDb?: Db };
+const globalForDb = globalThis as unknown as { __antoniaSql?: Sql; __antoniaReady?: Promise<void> };
 
-/** Folder holding the data file. Must be on a disk that survives restarts and redeploys. */
-export function dataDir(): string {
-  return resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR || join(process.cwd(), "data"));
+/**
+ * The connection string. Vercel's Postgres integration (Neon) sets DATABASE_URL;
+ * older integrations set POSTGRES_URL.
+ */
+export function databaseUrl(): string {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) throw new Error("No database connected: set DATABASE_URL. See README → Deploy.");
+  return url;
 }
 
-export function openDb(file: string): Db {
-  const db = new DatabaseSync(file);
-  db.exec("pragma journal_mode = wal; pragma foreign_keys = on; pragma busy_timeout = 5000;");
-  db.exec(SCHEMA);
-  return db;
+export function connect(url = databaseUrl()): Sql {
+  return postgres(url, {
+    // Pooled connection strings (pgbouncer in transaction mode) don't support prepared statements.
+    prepare: false,
+    max: 5,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    onnotice: () => {},
+    types: {
+      // Keep calendar dates as 'YYYY-MM-DD' strings so no timezone shifting can occur.
+      date: { to: 1082, from: [1082], serialize: (v: unknown) => String(v), parse: (v: string) => v },
+      numeric: { to: 1700, from: [1700], serialize: (v: unknown) => String(v), parse: (v: string) => Number(v) },
+    },
+  });
+}
+
+/** Creates the schema if it isn't there yet. The advisory lock stops two cold starts racing on the DDL. */
+export async function ensureSchema(sql: Sql) {
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(7366160501)`;
+    await tx.unsafe(SCHEMA);
+  });
 }
 
 /**
- * Opened on first use, not at import time: `next build` imports every route to
- * collect page data, and the build must not create a data file.
+ * Connected on first use, not at import time: `next build` imports every route
+ * to collect page data, and the build must not need a database.
  */
-export function getDb(): Db {
-  if (globalForDb.__antoniaDb) return globalForDb.__antoniaDb;
-  if (process.env.VERCEL) {
-    // Vercel's filesystem is wiped between invocations: every client record would be lost.
-    throw new Error("The built-in data file needs a persistent disk; Vercel has none. See README → Deploy.");
-  }
-  const dir = dataDir();
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const db = openDb(join(dir, "antonia.db"));
-  // Reused across requests (and across dev hot reloads).
-  globalForDb.__antoniaDb = db;
-  return db;
-}
-
-/** Test hook: use an already-open database (e.g. ':memory:') instead of the data file. */
-export function setDbForTests(db: Db | undefined) {
-  globalForDb.__antoniaDb = db;
-}
-
-/**
- * Runs `fn` in a transaction. node:sqlite is synchronous, so nothing else can
- * run between BEGIN and COMMIT on this connection.
- */
-export function tx<T>(fn: (db: Db) => T): T {
-  const db = getDb();
-  db.exec("begin immediate");
-  try {
-    const out = fn(db);
-    db.exec("commit");
-    return out;
-  } catch (e) {
-    db.exec("rollback");
+async function getSql(): Promise<Sql> {
+  const sql = (globalForDb.__antoniaSql ??= connect());
+  // Reused across requests (and dev hot reloads); a failed setup is retried on the next request.
+  globalForDb.__antoniaReady ??= ensureSchema(sql).catch((e) => {
+    globalForDb.__antoniaReady = undefined;
     throw e;
-  }
+  });
+  await globalForDb.__antoniaReady;
+  return sql;
 }
 
-export const newId = () => crypto.randomUUID();
-export const nowIso = () => new Date().toISOString();
+/** Runs `fn` in a transaction. */
+export async function withDb<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return (await getSql()).begin(fn) as Promise<T>;
+}
+
+/** Test hook: use this connection (schema already applied) instead of DATABASE_URL. */
+export function setSqlForTests(sql: Sql | undefined) {
+  globalForDb.__antoniaSql = sql;
+  globalForDb.__antoniaReady = sql ? Promise.resolve() : undefined;
+}

@@ -1,11 +1,12 @@
-import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const APP_PORT = 3100;
-const DATA_DIR = join(process.cwd(), ".e2e-data");
+const ADMIN_URL = process.env.E2E_ADMIN_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/postgres";
+const DB_URL = ADMIN_URL.replace(/\/[^/]*$/, "/antonia_e2e");
 
 // Picked up by e2e/support/global-setup.ts
-process.env.E2E_DATA_DIR = DATA_DIR;
+process.env.E2E_ADMIN_DATABASE_URL = ADMIN_URL;
+process.env.E2E_DATABASE_URL = DB_URL;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -28,7 +29,7 @@ export default defineConfig({
       timeout: 240_000,
       reuseExistingServer: false,
       env: {
-        DATA_DIR,
+        DATABASE_URL: DB_URL,
         // Hash of PASSCODE in e2e/support/helpers.ts (made with `npm run passcode`).
         PASSCODE_HASH: "scrypt:15:8:1:CmkhKipVWp4fy5AjW_9u0A:_24y7YUfXAEy2P6hn2MTfRL2EUXxG_-fH73o5704NZk",
       },

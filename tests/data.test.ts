@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { openDb, setDbForTests } from "@/lib/db/client";
+import { describe, expect, it } from "vitest";
+import { TEST_DATABASE_URL, setupTestDatabase } from "./support/db";
 import { clientSchema } from "@/lib/validation/client";
 import { goalSchema } from "@/lib/validation/goal";
 import { createClientRecord, deleteClientRecord, getClient, listClients, setClientArchived } from "@/lib/data/clients";
@@ -10,13 +10,13 @@ import { createMetric, listMetrics, upsertMetricEntry } from "@/lib/data/metrics
 import { createNote, listNotes } from "@/lib/data/notes";
 import { exportAll, getProfile, updateProfile } from "@/lib/data/profile";
 
-beforeEach(() => setDbForTests(openDb(":memory:")));
-
 const client = (fullName: string) => createClientRecord(clientSchema.parse({ fullName, kind: "personal_training", status: "active" }));
 const session = (clientId: string, sessionDate: string, entries: { exerciseName: string; sets: { reps?: number; weight?: number }[] }[]) =>
   saveSession({ clientId, sessionDate, entries }) as Promise<string>;
 
-describe("built-in data store", () => {
+describe.skipIf(!TEST_DATABASE_URL)("data store", () => {
+  setupTestDatabase();
+
   it("creates, lists, archives and deletes clients", async () => {
     const id = await client("Zed Person");
     await client("amy Person");
