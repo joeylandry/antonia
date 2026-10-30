@@ -24,7 +24,7 @@ export default async function SessionsPage({
   const { show } = await searchParams;
   const limit = Math.min(Math.max(Number(show) || PAGE, PAGE), 1000);
   const trainer = await requireTrainer();
-  const allSessions = await listSessions(trainer.id, id);
+  const allSessions = await listSessions(id);
   const sessions = allSessions.slice(0, limit);
   const year = Number(todayIn(trainer.timezone).slice(0, 4));
 

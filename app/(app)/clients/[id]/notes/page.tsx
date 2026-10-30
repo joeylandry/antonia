@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Notes" };
 export default async function NotesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const trainer = await requireTrainer();
-  const notes = await listNotes(trainer.id, id);
+  const notes = await listNotes(id);
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <SectionHeader title="Notes" description="Private to you. Newest first." />

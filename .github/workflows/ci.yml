@@ -37,12 +37,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
 
-      - name: Database tests
+      - name: Unit and database tests
         run: |
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -c "create database antonia_ci"
-          for f in db/dev/supabase-shim.sql db/migrations/*.sql; do
-            PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d antonia_ci -v ON_ERROR_STOP=1 -q -f "$f"
-          done
           npm test
 
       - name: End-to-end tests

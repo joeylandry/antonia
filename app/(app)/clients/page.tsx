@@ -15,7 +15,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const initialHealth = health === "on_track" || health === "watch" || health === "overdue" ? health : "all";
   const showArchived = archived === "1";
   const trainer = await requireTrainer();
-  const clients = await listClients(trainer.id, { archived: showArchived });
+  const clients = await listClients({ archived: showArchived });
 
   return (
     <div className="space-y-6">

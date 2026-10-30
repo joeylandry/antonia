@@ -1,40 +1,30 @@
 import "server-only";
-import { withTrainer } from "@/lib/db/client";
+import { withDb } from "@/lib/db/client";
 
-export async function updateProfile(trainerId: string, v: { displayName: string; timezone: string }) {
-  await withTrainer(trainerId, (tx) => tx`update public.trainers set display_name = ${v.displayName}, timezone = ${v.timezone} where id = ${trainerId}`);
+export async function getProfile(): Promise<{ displayName: string; timezone: string }> {
+  return withDb(async (tx) => {
+    const [r] = await tx<{ display_name: string; timezone: string }[]>`select display_name, timezone from app.profile where id = 1`;
+    return { displayName: r.display_name, timezone: r.timezone };
+  });
 }
 
-/** Everything the trainer owns, for a full-fidelity backup. Row Level Security limits this to their own rows. */
-export async function exportAll(trainerId: string) {
-  return withTrainer(trainerId, async (tx) => {
-    const [clients, exercises, sessions, entries, goals, metrics, metricEntries, notes] = await Promise.all([
-      tx`select * from public.clients order by full_name`,
-      tx`select id, name, created_at from public.exercises order by name`,
-      tx`select * from public.sessions order by session_date`,
-      tx`select * from public.session_entries order by session_id, position`,
-      tx`select * from public.goals order by created_at`,
-      tx`select * from public.metrics order by created_at`,
-      tx`select * from public.metric_entries order by entry_date`,
-      tx`select * from public.client_notes order by created_at`,
+export async function updateProfile(v: { displayName: string; timezone: string }) {
+  await withDb((tx) => tx`update app.profile set display_name = ${v.displayName}, timezone = ${v.timezone} where id = 1`);
+}
+
+/** Everything in the app, for a full-fidelity backup. */
+export async function exportAll() {
+  return withDb(async (tx) => {
+    const [clients, exercises, sessions, sessionEntries, goals, metrics, metricEntries, clientNotes] = await Promise.all([
+      tx`select * from app.clients order by full_name`,
+      tx`select id, name, created_at from app.exercises order by name`,
+      tx`select * from app.sessions order by session_date`,
+      tx`select * from app.session_entries order by session_id, position`,
+      tx`select * from app.goals order by created_at`,
+      tx`select * from app.metrics order by created_at`,
+      tx`select * from app.metric_entries order by entry_date`,
+      tx`select * from app.client_notes order by created_at`,
     ]);
-    const strip = <T extends Record<string, unknown>>(rows: T[]) =>
-      rows.map((row) => {
-        const rest: Record<string, unknown> = { ...row };
-        delete rest.trainer_id;
-        return rest;
-      });
-    return {
-      exportedAt: new Date().toISOString(),
-      schemaVersion: 1,
-      clients: strip(clients),
-      exercises,
-      sessions: strip(sessions),
-      sessionEntries: strip(entries),
-      goals: strip(goals),
-      metrics: strip(metrics),
-      metricEntries: strip(metricEntries),
-      clientNotes: strip(notes),
-    };
+    return { exportedAt: new Date().toISOString(), schemaVersion: 1, clients, exercises, sessions, sessionEntries, goals, metrics, metricEntries, clientNotes };
   });
 }

@@ -14,7 +14,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const trainer = await requireTrainer();
   const today = todayIn(trainer.timezone);
-  const [history, goals, metrics] = await Promise.all([exerciseHistory(trainer.id, id), listGoals(trainer.id, id), listMetrics(trainer.id, id)]);
+  const [history, goals, metrics] = await Promise.all([exerciseHistory(id), listGoals(id), listMetrics(id)]);
 
   const byExercise = new Map<string, ExerciseHistory>();
   for (const h of history) {

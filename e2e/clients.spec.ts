@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { addClient, createTrainer, signIn } from "./support/helpers";
+import { addClient, signIn } from "./support/helpers";
 
 test.describe("client management", () => {
   test("a new account sees helpful empty states, then can add a client in seconds", async ({ page }) => {
-    const { email } = await createTrainer("clients-new");
-    await signIn(page, email);
+    await signIn(page);
     await expect(page.getByText("Let's add your first client")).toBeVisible();
     await page.goto("/clients");
     await expect(page.getByText("Add your first client")).toBeVisible();
@@ -17,8 +16,7 @@ test.describe("client management", () => {
   });
 
   test("validation: name required, bad dates and numbers rejected, data persists after edit", async ({ page }) => {
-    const { email } = await createTrainer("clients-edit");
-    await signIn(page, email);
+    await signIn(page);
     await page.goto("/clients/new");
     await page.getByRole("button", { name: "Add client" }).click();
     await expect(page.getByText("Enter the client's name.")).toBeVisible();
@@ -53,8 +51,7 @@ test.describe("client management", () => {
   });
 
   test("search, filter and sort the client list", async ({ page }) => {
-    const { email } = await createTrainer("clients-list");
-    await signIn(page, email);
+    await signIn(page);
     await addClient(page, "Zed Zimmer", "run a marathon");
     await addClient(page, "Amy Adams", "improve posture");
     await addClient(page, "Max Moore");
@@ -68,13 +65,13 @@ test.describe("client management", () => {
     await page.getByLabel("Search clients").fill("zzzz");
     await expect(page.getByText("No clients match your search.")).toBeVisible();
     await page.getByLabel("Search clients").fill("");
+    // The database is shared by the whole run, so other tests' clients may be on hold; these three are active.
     await page.getByRole("button", { name: /^On hold/ }).click();
-    await expect(page.getByText("No clients match your search.")).toBeVisible();
+    await expect(rows.filter({ hasText: /Zed Zimmer|Amy Adams|Max Moore/ })).toHaveCount(0);
   });
 
   test("archive hides a client without losing data; restore brings it back; delete needs the name", async ({ page }) => {
-    const { email } = await createTrainer("clients-archive");
-    await signIn(page, email);
+    await signIn(page);
     const id = await addClient(page, "Archive Me");
     await page.getByRole("button", { name: "More actions" }).click();
     await page.getByRole("menuitem", { name: "Archive client" }).click();

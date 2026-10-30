@@ -1,6 +1,6 @@
 import "server-only";
 import type { Tx } from "@/lib/db/client";
-import { withTrainer } from "@/lib/db/client";
+import { withDb } from "@/lib/db/client";
 import type { Client, ClientListItem, ClientKind, ClientStatus } from "@/lib/domain/types";
 import type { ClientInput } from "@/lib/validation/client";
 
@@ -47,16 +47,15 @@ export function mapClient(r: Row): Client {
 export type ClientSort = "name" | "recent" | "review" | "newest";
 
 export async function listClients(
-  trainerId: string,
   opts: { archived?: boolean } = {},
 ): Promise<ClientListItem[]> {
-  return withTrainer(trainerId, async (tx) => {
+  return withDb(async (tx) => {
     const rows = await tx<(Row & { last_session_date: string | null; session_count: number; active_goal_count: number })[]>`
       select c.*,
-        (select max(s.session_date) from public.sessions s where s.client_id = c.id) as last_session_date,
-        (select count(*)::int from public.sessions s where s.client_id = c.id) as session_count,
-        (select count(*)::int from public.goals g where g.client_id = c.id and g.status = 'active') as active_goal_count
-      from public.clients c
+        (select max(s.session_date) from app.sessions s where s.client_id = c.id) as last_session_date,
+        (select count(*)::int from app.sessions s where s.client_id = c.id) as session_count,
+        (select count(*)::int from app.goals g where g.client_id = c.id and g.status = 'active') as active_goal_count
+      from app.clients c
       where ${opts.archived ? tx`c.archived_at is not null` : tx`c.archived_at is null`}
       order by lower(c.full_name)`;
     return rows.map((r) => ({
@@ -68,10 +67,10 @@ export async function listClients(
   });
 }
 
-export async function getClient(trainerId: string, id: string): Promise<Client | null> {
+export async function getClient(id: string): Promise<Client | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  return withTrainer(trainerId, async (tx) => {
-    const [row] = await tx<Row[]>`select * from public.clients where id = ${id}`;
+  return withDb(async (tx) => {
+    const [row] = await tx<Row[]>`select * from app.clients where id = ${id}`;
     return row ? mapClient(row) : null;
   });
 }
@@ -93,42 +92,42 @@ function values(input: ClientInput) {
   };
 }
 
-export async function createClientRecord(trainerId: string, input: ClientInput): Promise<string> {
-  return withTrainer(trainerId, async (tx) => {
+export async function createClientRecord(input: ClientInput): Promise<string> {
+  return withDb(async (tx) => {
     const v = values(input);
     const [row] = await tx<{ id: string }[]>`
-      insert into public.clients ${tx({ ...v, trainer_id: trainerId })} returning id`;
+      insert into app.clients ${tx(v)} returning id`;
     return row.id;
   });
 }
 
-export async function updateClientRecord(trainerId: string, id: string, input: ClientInput): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
-    const rows = await tx`update public.clients set ${tx(values(input))} where id = ${id} returning id`;
+export async function updateClientRecord(id: string, input: ClientInput): Promise<boolean> {
+  return withDb(async (tx) => {
+    const rows = await tx`update app.clients set ${tx(values(input))} where id = ${id} returning id`;
     return rows.length > 0;
   });
 }
 
-export async function setClientArchived(trainerId: string, id: string, archived: boolean): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
+export async function setClientArchived(id: string, archived: boolean): Promise<boolean> {
+  return withDb(async (tx) => {
     const rows = await tx`
-      update public.clients set archived_at = ${archived ? tx`now()` : null} where id = ${id} returning id`;
+      update app.clients set archived_at = ${archived ? tx`now()` : null} where id = ${id} returning id`;
     return rows.length > 0;
   });
 }
 
 /** Marks a review as done and optionally schedules the next one. */
-export async function completeReview(trainerId: string, id: string, today: string, nextReview: string | null): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
+export async function completeReview(id: string, today: string, nextReview: string | null): Promise<boolean> {
+  return withDb(async (tx) => {
     const rows = await tx`
-      update public.clients set last_reviewed_on = ${today}, next_review_date = ${nextReview} where id = ${id} returning id`;
+      update app.clients set last_reviewed_on = ${today}, next_review_date = ${nextReview} where id = ${id} returning id`;
     return rows.length > 0;
   });
 }
 
-export async function deleteClientRecord(trainerId: string, id: string): Promise<boolean> {
-  return withTrainer(trainerId, async (tx) => {
-    const rows = await tx`delete from public.clients where id = ${id} returning id`;
+export async function deleteClientRecord(id: string): Promise<boolean> {
+  return withDb(async (tx) => {
+    const rows = await tx`delete from app.clients where id = ${id} returning id`;
     return rows.length > 0;
   });
 }

@@ -22,15 +22,15 @@ export const metadata: Metadata = { title: "Client overview" };
 export default async function ClientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const trainer = await requireTrainer();
-  const client = await getClient(trainer.id, id);
+  const client = await getClient(id);
   if (!client) notFound();
   const today = todayIn(trainer.timezone);
   const year = Number(today.slice(0, 4));
   const [sessions, goals, history, exercises] = await Promise.all([
-    listSessions(trainer.id, id),
-    listGoals(trainer.id, id),
-    exerciseHistory(trainer.id, id),
-    listExercises(trainer.id),
+    listSessions(id),
+    listGoals(id),
+    exerciseHistory(id),
+    listExercises(),
   ]);
   const activeGoals = goals.filter((g) => g.status === "active");
   const progress = progressByGoal(activeGoals, history, today);

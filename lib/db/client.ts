@@ -1,17 +1,27 @@
 import "server-only";
 import postgres from "postgres";
-import { env } from "@/lib/env";
+import { SCHEMA } from "./schema";
 
 type Sql = postgres.Sql;
 export type Tx = postgres.TransactionSql;
 
-const globalForDb = globalThis as unknown as { __antoniaSql?: Sql };
+const globalForDb = globalThis as unknown as { __antoniaSql?: Sql; __antoniaReady?: Promise<void> };
 
-function connect(): Sql {
-  return postgres(env.databaseUrl, {
-    // Supabase's transaction pooler does not support prepared statements.
+/**
+ * The connection string. Vercel's Postgres integration (Neon) sets DATABASE_URL;
+ * older integrations set POSTGRES_URL.
+ */
+export function databaseUrl(): string {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) throw new Error("No database connected: set DATABASE_URL. See README → Deploy.");
+  return url;
+}
+
+export function connect(url = databaseUrl()): Sql {
+  return postgres(url, {
+    // Pooled connection strings (pgbouncer in transaction mode) don't support prepared statements.
     prepare: false,
-    max: 10,
+    max: 5,
     idle_timeout: 20,
     connect_timeout: 10,
     onnotice: () => {},
@@ -23,27 +33,36 @@ function connect(): Sql {
   });
 }
 
-/**
- * Created on first use, not at import time: `next build` imports every route to
- * collect page data, and the build must not need DATABASE_URL (or a database).
- */
-function getSql(): Sql {
-  if (globalForDb.__antoniaSql) return globalForDb.__antoniaSql;
-  const client = connect();
-  // Reused across requests (and across dev hot reloads) so connections aren't leaked.
-  globalForDb.__antoniaSql = client;
-  return client;
+/** Creates the schema if it isn't there yet. The advisory lock stops two cold starts racing on the DDL. */
+export async function ensureSchema(sql: Sql) {
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(7366160501)`;
+    await tx.unsafe(SCHEMA);
+  });
 }
 
 /**
- * Runs `fn` in a transaction acting as `trainerId` under Row Level Security.
- * The `authenticated` role cannot bypass RLS, so even a bug in a query cannot
- * read or write another trainer's rows.
+ * Connected on first use, not at import time: `next build` imports every route
+ * to collect page data, and the build must not need a database.
  */
-export async function withTrainer<T>(trainerId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
-  return getSql().begin(async (tx) => {
-    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: trainerId, role: "authenticated" })}, true)`;
-    await tx`select set_config('role', 'authenticated', true)`;
-    return fn(tx);
-  }) as Promise<T>;
+async function getSql(): Promise<Sql> {
+  const sql = (globalForDb.__antoniaSql ??= connect());
+  // Reused across requests (and dev hot reloads); a failed setup is retried on the next request.
+  globalForDb.__antoniaReady ??= ensureSchema(sql).catch((e) => {
+    globalForDb.__antoniaReady = undefined;
+    throw e;
+  });
+  await globalForDb.__antoniaReady;
+  return sql;
+}
+
+/** Runs `fn` in a transaction. */
+export async function withDb<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return (await getSql()).begin(fn) as Promise<T>;
+}
+
+/** Test hook: use this connection (schema already applied) instead of DATABASE_URL. */
+export function setSqlForTests(sql: Sql | undefined) {
+  globalForDb.__antoniaSql = sql;
+  globalForDb.__antoniaReady = sql ? Promise.resolve() : undefined;
 }

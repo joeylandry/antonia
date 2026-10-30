@@ -12,10 +12,10 @@ export const metadata: Metadata = { title: "Log session" };
 export default async function NewSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const trainer = await requireTrainer();
-  const client = await getClient(trainer.id, id);
+  const client = await getClient(id);
   if (!client) notFound();
   if (client.archivedAt) redirect(`/clients/${id}`);
-  const data = await loadEditorData(trainer.id, id);
+  const data = await loadEditorData(id);
 
   return (
     <div className="mx-auto max-w-3xl">

@@ -22,13 +22,13 @@ function parseClient(formData: FormData) {
 }
 
 export async function createClientAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = parseClient(formData);
   if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error.issues), error: "Please fix the highlighted fields.", values: textValues(formData) };
 
   let id: string;
   try {
-    id = await createClientRecord(trainer.id, parsed.data);
+    id = await createClientRecord(parsed.data);
   } catch {
     return { error: "We couldn't save this client. Please try again.", values: textValues(formData) };
   }
@@ -38,13 +38,13 @@ export async function createClientAction(_prev: ActionState, formData: FormData)
 }
 
 export async function updateClientAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   const parsed = parseClient(formData);
   if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error.issues), error: "Please fix the highlighted fields.", values: textValues(formData) };
 
   let found: boolean;
   try {
-    found = await updateClientRecord(trainer.id, id, parsed.data);
+    found = await updateClientRecord(id, parsed.data);
   } catch {
     return { error: "We couldn't save your changes. Please try again.", values: textValues(formData) };
   }
@@ -56,9 +56,9 @@ export async function updateClientAction(id: string, _prev: ActionState, formDat
 }
 
 export async function setArchivedAction(id: string, archived: boolean): Promise<{ ok: boolean; error?: string }> {
-  const trainer = await requireTrainer();
+  await requireTrainer();
   try {
-    const ok = await setClientArchived(trainer.id, id, archived);
+    const ok = await setClientArchived(id, archived);
     if (!ok) return { ok: false, error: "This client no longer exists." };
   } catch {
     return { ok: false, error: "Something went wrong. Please try again." };
@@ -70,14 +70,14 @@ export async function setArchivedAction(id: string, archived: boolean): Promise<
 }
 
 export async function deleteClientAction(id: string, confirmName: string): Promise<{ ok: boolean; error?: string }> {
-  const trainer = await requireTrainer();
-  const client = await getClient(trainer.id, id);
+  await requireTrainer();
+  const client = await getClient(id);
   if (!client) return { ok: false, error: "This client no longer exists." };
   if (confirmName.trim().toLowerCase() !== client.fullName.trim().toLowerCase()) {
     return { ok: false, error: "The name you typed doesn't match." };
   }
   try {
-    await deleteClientRecord(trainer.id, id);
+    await deleteClientRecord(id);
   } catch {
     return { ok: false, error: "Something went wrong. Please try again." };
   }
@@ -92,7 +92,7 @@ export async function completeReviewAction(id: string, weeks: number | null): Pr
   const today = todayIn(trainer.timezone);
   const next = weeks && weeks > 0 && weeks <= 52 ? addDays(today, weeks * 7) : null;
   try {
-    const ok = await completeReview(trainer.id, id, today, next);
+    const ok = await completeReview(id, today, next);
     if (!ok) return { ok: false, error: "This client no longer exists." };
   } catch {
     return { ok: false, error: "Something went wrong. Please try again." };
